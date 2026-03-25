@@ -37,8 +37,19 @@ link_file() {
 echo "📦 Linking opencode commands..."
 link_file "$DOTFILES_DIR/.config/opencode/commands" "$HOME/.config/opencode/commands"
 
+# Link Pi prompts
+echo "📦 Linking Pi prompts..."
+link_file "$DOTFILES_DIR/.pi/agent/prompts" "$HOME/.pi/agent/prompts"
+
 echo ""
 echo "🎉 Dotfiles installed!"
 echo ""
 echo "Commands now available:"
+echo ""
+echo "Opencode:"
 echo "   /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
+echo ""
+echo "Pi:"
+echo "   /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
+echo ""
+echo "Both agents now support mission-aware thought streams!"
