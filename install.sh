@@ -132,6 +132,13 @@ cmd_install() {
     echo "📦 Linking Pi prompts..."
     link_file "$DOTFILES_DIR/.pi/agent/prompts" "$HOME/.pi/agent/prompts"
 
+    # Link Claude Code scripts
+    echo "📦 Linking Claude Code scripts..."
+    for script in "$DOTFILES_DIR/.claude/"*.sh; do
+        [ -f "$script" ] || continue
+        link_file "$script" "$HOME/.claude/$(basename "$script")"
+    done
+
     # Link universal Claude Code skills
     echo "📦 Linking universal Claude Code skills..."
     link_profile_skills "universal" "$HOME/.claude/skills"
