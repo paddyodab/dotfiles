@@ -2,7 +2,7 @@
 description: Fetch a Shortcut ticket by ID or URL and display its contents
 argument-hint: "<story-id or URL>"
 allowed-tools:
-  - Bash(bun:*)
+  - Bash(curl:*)
 ---
 
 # Purpose
@@ -17,28 +17,24 @@ The user provides either:
 - A bare story ID: `68069`
 - A full Shortcut URL: `https://app.shortcut.com/nrc-health/story/68069/some-slug`
 
-Extract the value from `$ARGUMENTS`. If no argument provided, ask the user for a story ID or URL.
+Extract the numeric story ID from `$ARGUMENTS`. If no argument provided, ask the user for a story ID or URL.
 
 ### 2. Fetch the story
 
 ```bash
-bun ${CLAUDE_PLUGIN_ROOT}/cli/bin/core shortcut get-story --id ${STORY_ID}
-```
-
-Or if a URL was provided:
-
-```bash
-bun ${CLAUDE_PLUGIN_ROOT}/cli/bin/core shortcut get-story --url "${URL}"
+curl -s http://localhost:9876/shortcut/story/${STORY_ID}
 ```
 
 ### 3. Handle errors
 
-| Error | Response |
-|-------|----------|
-| No token | "Set `SHORTCUT_API_TOKEN` in your `~/.bash_profile` and restart your shell." |
-| 401/403 | "Token is invalid or lacks read access. Check your Shortcut API token." |
-| 404 | "Story not found. Double-check the ID." |
-| Other | Show the error message from the CLI |
+If the response contains an `error` field:
+
+| Error contains | Response |
+|----------------|----------|
+| "Authentication" | "Set `SHORTCUT_API_TOKEN` in your tool-gw `.env` file and restart the gateway." |
+| "not found" | "Story not found. Double-check the ID." |
+| "ECONNREFUSED" | "tool-gw is not running. Start it with `npm run dev` in the tool-gw directory." |
+| Other | Show the error message |
 
 ### 4. Format the output
 
@@ -49,7 +45,6 @@ Parse the JSON response and present a readable summary:
 **URL:** app_url
 **Labels:** label1, label2
 **Estimate:** N points
-**Epic:** epic_id (if set)
 
 ### Description
 (full description text)
@@ -66,7 +61,7 @@ Parse the JSON response and present a readable summary:
 - branch-name
 
 ### Pull Requests
-- PR title (url) +added/-removed
+- PR title (url)
 ```
 
 Omit empty sections. Present the description in full — this is the primary content the user needs.
