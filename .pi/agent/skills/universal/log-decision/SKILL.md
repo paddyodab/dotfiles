@@ -2,10 +2,7 @@
 name: log-decision
 description: Capture a decision trace from the current session to the central KB. Zero-friction — extracts domain, choice, alternatives, why, and stage from context without asking.
 argument-hint: "[optional: which decision if multiple happened]"
-model: haiku
-allowed-tools:
-  - AskUserQuestion
-  - Bash
+allowed-tools: read bash interview edit write
 ---
 
 # /log-decision
@@ -38,43 +35,46 @@ This allows the same skill to work across machines with different directory stru
 
 ### Step 0: KB Setup (First Time Only)
 
-Before logging decisions, ensure the central KB is accessible. Check if `KB_PATH` is set or the default KB exists:
+Before logging decisions, ensure the central KB is accessible. Check if `KB_PATH` is set or the default KB exists using the bash tool:
 
 ```bash
-# Check current state
 if [ -n "$KB_PATH" ]; then
-  echo "KB_PATH is set to: $KB_PATH"
+  echo "KB_PATH_SET:$KB_PATH"
   if [ -d "$KB_PATH" ]; then
-    echo "KB directory exists"
+    echo "KB_EXISTS:yes"
   else
-    echo "KB directory does NOT exist"
-  fi
+    echo "KB_EXISTS:no"
+ fi
 else
-  echo "KB_PATH is not set"
+  echo "KB_PATH_SET:none"
   DEFAULT_KB="$HOME/Documents/GitHub/central-kb-for-remote-skills"
   if [ -d "$DEFAULT_KB" ]; then
-    echo "Default KB exists at: $DEFAULT_KB"
+    echo "DEFAULT_EXISTS:yes:$DEFAULT_KB"
   else
-    echo "Default KB does NOT exist at: $DEFAULT_KB"
+    echo "DEFAULT_EXISTS:no:$DEFAULT_KB"
   fi
 fi
 ```
 
 **If KB_PATH is not set AND the default KB doesn't exist:**
 
-Ask using AskUserQuestion:
+Use the interview tool to ask:
 
-```
-I need to set up the central knowledge base path for logging decisions.
-
-The KB stores decision traces across all your projects and machines.
-
-Options:
-1. Use default: ~/Documents/GitHub/central-kb-for-remote-skills
-2. Set a custom path
-3. Clone your existing KB from a remote repo
-
-Which option? (1/2/3 or describe your setup)
+```json
+{
+  "questions": [
+    {
+      "id": "kb_setup",
+      "type": "single",
+      "question": "I need to set up the central knowledge base path for logging decisions.\n\nThe KB stores decision traces across all your projects and machines.\n\nWhich option?",
+      "options": [
+        "Use default: ~/Documents/GitHub/central-kb-for-remote-skills",
+        "Set a custom path",
+        "Clone your existing KB from a remote repo"
+      ]
+    }
+  ]
+}
 ```
 
 Based on response:
@@ -85,20 +85,28 @@ mkdir -p "$HOME/Documents/GitHub/central-kb-for-remote-skills/decisions"
 ```
 
 **Option 2 (custom path):**
-Ask: `What path should I use for the KB? (absolute path)`
+Use interview to ask: `What absolute path should I use for the KB?`
 Then: `mkdir -p "{provided_path}/decisions"`
 
 **Option 3 (clone existing):**
-Ask: `What's the git URL for your KB repo?`
+Use interview to ask: `What's the git URL for your KB repo?`
 Then: `git clone {url} "$HOME/Documents/GitHub/central-kb-for-remote-skills"`
 
-After setting up the KB directory, ask:
-```
-Shall I add KB_PATH to your shell config so this works across all sessions?
-(This will append to your .bashrc/.zshrc)
+After setting up the KB directory, ask using interview:
+```json
+{
+  "questions": [
+    {
+      "id": "add_to_shell",
+      "type": "single",
+      "question": "Shall I add KB_PATH to your shell config so this works across all sessions?\n(This will append to your .bashrc/.zshrc)",
+      "options": ["Yes", "No"]
+    }
+  ]
+}
 ```
 
-If yes, detect the shell and add the export:
+If yes, detect the shell and add the export using bash:
 ```bash
 SHELL_CONFIG="$HOME/.$(basename $SHELL)rc"
 echo 'export KB_PATH="'$KB'"' >> "$SHELL_CONFIG"
@@ -118,32 +126,41 @@ Extract these five fields:
 | `why` | The reason — most important field. Pull from context. |
 | `stage` | Where in the project: `greenfield`, `pre-auth`, `pre-launch`, `post-launch`, `refactor`, `debugging`, `maintenance` |
 
-If `why` cannot be inferred from the conversation, ask using AskUserQuestion:
-```
-Why did you choose {chose}? (one sentence)
+If `why` cannot be inferred from the conversation, use interview to ask:
+
+```json
+{
+  "questions": [
+    {
+      "id": "why_decision",
+      "type": "text",
+      "question": "Why did you choose {chose}? (one sentence)"
+    }
+  ]
+}
 ```
 
 ### Step 2: Confirm
 
-Show the entry and ask using AskUserQuestion:
+Show the entry and use interview to confirm:
 
+```json
+{
+  "questions": [
+    {
+      "id": "confirm",
+      "type": "text",
+      "question": "Decision to log:\n\n  domain:       {domain}\n  chose:        {chose}\n  alternatives: {alternatives}\n  why:          {why}\n  stage:        {stage}\n\nRight? (press enter to save, or describe a correction)"
+    }
+  ]
+}
 ```
-Decision to log:
 
-  domain:       {domain}
-  chose:        {chose}
-  alternatives: {alternatives joined by ", "}
-  why:          {why}
-  stage:        {stage}
+Accept "y", "yes", empty input, or Enter as confirmation. If they describe a correction, apply it and re-show before saving.
 
-Right? (press enter to save, or describe a correction)
-```
+### Step 3: Write to KB
 
-Accept "y", "yes", or empty input as confirmation. If they describe a correction, apply it and re-show before saving.
-
-### Step 4: Write to KB
-
-Determine KB path (already validated in Step 0):
+Determine KB path (already validated in Step 0) using bash:
 
 ```bash
 DATE=$(date +%Y-%m-%d)
@@ -152,13 +169,15 @@ KB="${KB_PATH:-$HOME/Documents/GitHub/central-kb-for-remote-skills}"
 mkdir -p "$KB/decisions"
 ```
 
-Construct the JSONL entry — use the extracted values, JSON-encode strings properly:
+Construct the JSONL entry using bash (JSON-encode strings properly):
 
 ```bash
 echo "{\"type\":\"decision\",\"domain\":\"DOMAIN\",\"chose\":\"CHOSE\",\"alternatives\":[ALTERNATIVES_JSON],\"why\":\"WHY\",\"stage\":\"STAGE\",\"project\":\"$PROJECT\",\"date\":\"$DATE\",\"source\":\"session\"}" >> "$KB/decisions/decisions.jsonl"
 ```
 
-### Step 5: Commit and Push
+### Step 4: Commit and Push
+
+Use bash:
 
 ```bash
 cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN — CHOSE" && git push
@@ -166,7 +185,9 @@ cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN
 
 If push fails (no remote, offline), skip silently — the entry is written locally and will sync next push.
 
-### Step 6: Confirm
+### Step 5: Confirm
+
+Report to user:
 
 ```
 ✓ Logged: {domain} → {chose}

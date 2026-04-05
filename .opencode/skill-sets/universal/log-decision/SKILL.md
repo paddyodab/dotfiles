@@ -2,10 +2,6 @@
 name: log-decision
 description: Capture a decision trace from the current session to the central KB. Zero-friction — extracts domain, choice, alternatives, why, and stage from context without asking.
 argument-hint: "[optional: which decision if multiple happened]"
-model: haiku
-allowed-tools:
-  - AskUserQuestion
-  - Bash
 ---
 
 # /log-decision
@@ -38,31 +34,30 @@ This allows the same skill to work across machines with different directory stru
 
 ### Step 0: KB Setup (First Time Only)
 
-Before logging decisions, ensure the central KB is accessible. Check if `KB_PATH` is set or the default KB exists:
+Before logging decisions, ensure the central KB is accessible. Use the bash tool to check:
 
 ```bash
-# Check current state
 if [ -n "$KB_PATH" ]; then
-  echo "KB_PATH is set to: $KB_PATH"
+  echo "KB_PATH_SET:$KB_PATH"
   if [ -d "$KB_PATH" ]; then
-    echo "KB directory exists"
+    echo "KB_EXISTS:yes"
   else
-    echo "KB directory does NOT exist"
+    echo "KB_EXISTS:no"
   fi
 else
-  echo "KB_PATH is not set"
+  echo "KB_PATH_SET:none"
   DEFAULT_KB="$HOME/Documents/GitHub/central-kb-for-remote-skills"
   if [ -d "$DEFAULT_KB" ]; then
-    echo "Default KB exists at: $DEFAULT_KB"
+    echo "DEFAULT_EXISTS:yes:$DEFAULT_KB"
   else
-    echo "Default KB does NOT exist at: $DEFAULT_KB"
+    echo "DEFAULT_EXISTS:no:$DEFAULT_KB"
   fi
 fi
 ```
 
 **If KB_PATH is not set AND the default KB doesn't exist:**
 
-Ask using AskUserQuestion:
+Ask using the question tool:
 
 ```
 I need to set up the central knowledge base path for logging decisions.
@@ -80,17 +75,15 @@ Which option? (1/2/3 or describe your setup)
 Based on response:
 
 **Option 1 (default):**
-```bash
-mkdir -p "$HOME/Documents/GitHub/central-kb-for-remote-skills/decisions"
-```
+Use bash tool: `mkdir -p "$HOME/Documents/GitHub/central-kb-for-remote-skills/decisions"`
 
 **Option 2 (custom path):**
 Ask: `What path should I use for the KB? (absolute path)`
-Then: `mkdir -p "{provided_path}/decisions"`
+Then use bash: `mkdir -p "{provided_path}/decisions"`
 
 **Option 3 (clone existing):**
 Ask: `What's the git URL for your KB repo?`
-Then: `git clone {url} "$HOME/Documents/GitHub/central-kb-for-remote-skills"`
+Then use bash: `git clone {url} "$HOME/Documents/GitHub/central-kb-for-remote-skills"`
 
 After setting up the KB directory, ask:
 ```
@@ -98,7 +91,7 @@ Shall I add KB_PATH to your shell config so this works across all sessions?
 (This will append to your .bashrc/.zshrc)
 ```
 
-If yes, detect the shell and add the export:
+If yes, use bash to detect the shell and add the export:
 ```bash
 SHELL_CONFIG="$HOME/.$(basename $SHELL)rc"
 echo 'export KB_PATH="'$KB'"' >> "$SHELL_CONFIG"
@@ -118,14 +111,15 @@ Extract these five fields:
 | `why` | The reason — most important field. Pull from context. |
 | `stage` | Where in the project: `greenfield`, `pre-auth`, `pre-launch`, `post-launch`, `refactor`, `debugging`, `maintenance` |
 
-If `why` cannot be inferred from the conversation, ask using AskUserQuestion:
+If `why` cannot be inferred from the conversation, ask using the question tool:
+
 ```
 Why did you choose {chose}? (one sentence)
 ```
 
 ### Step 2: Confirm
 
-Show the entry and ask using AskUserQuestion:
+Show the entry and ask using the question tool:
 
 ```
 Decision to log:
@@ -145,6 +139,8 @@ Accept "y", "yes", or empty input as confirmation. If they describe a correction
 
 Determine KB path (already validated in Step 0):
 
+Use the bash tool:
+
 ```bash
 DATE=$(date +%Y-%m-%d)
 PROJECT=$(basename $(git rev-parse --show-toplevel 2>/dev/null) 2>/dev/null || echo "unknown")
@@ -160,6 +156,8 @@ echo "{\"type\":\"decision\",\"domain\":\"DOMAIN\",\"chose\":\"CHOSE\",\"alterna
 
 ### Step 5: Commit and Push
 
+Use the bash tool:
+
 ```bash
 cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN — CHOSE" && git push
 ```
@@ -167,6 +165,8 @@ cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN
 If push fails (no remote, offline), skip silently — the entry is written locally and will sync next push.
 
 ### Step 6: Confirm
+
+Report to user:
 
 ```
 ✓ Logged: {domain} → {chose}

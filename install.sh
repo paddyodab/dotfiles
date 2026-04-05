@@ -57,6 +57,33 @@ link_profile_skills() {
     fi
 }
 
+# Link Pi skills from profile to target
+link_profile_skills_pi() {
+    local profile="$1"
+    local target_dir="$2"
+    local pi_skills_dir="$DOTFILES_DIR/.pi/agent/skills"
+    local profile_dir="$pi_skills_dir/$profile"
+
+    if [ ! -d "$profile_dir" ]; then
+        echo "   ⚠️  Profile not found: $profile"
+        return 1
+    fi
+
+    mkdir -p "$target_dir"
+
+    local found=0
+    for skill_dir in "$profile_dir"/*/; do
+        [ -d "$skill_dir" ] || continue
+        local skill_name="$(basename "$skill_dir")"
+        link_file "$skill_dir" "$target_dir/$skill_name"
+        found=1
+    done
+
+    if [ "$found" -eq 0 ]; then
+        echo "   (no skills in $profile yet)"
+    fi
+}
+
 # List available profiles
 list_profiles() {
     echo "Available profiles:"
@@ -143,6 +170,10 @@ cmd_install() {
     echo "📦 Linking universal Claude Code skills..."
     link_profile_skills "universal" "$HOME/.claude/skills"
 
+    # Link universal Pi skills
+    echo "📦 Linking universal Pi skills..."
+    link_profile_skills_pi "universal" "$HOME/.pi/agent/skills"
+
     echo ""
     echo "🎉 Dotfiles installed!"
     echo ""
@@ -153,6 +184,7 @@ cmd_install() {
     echo ""
     echo "Pi:"
     echo "   /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
+    echo "   Universal skills linked to ~/.pi/agent/skills/"
     echo ""
     echo "Claude Code:"
     echo "   Universal skills linked to ~/.claude/skills/"
