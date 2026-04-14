@@ -15,7 +15,7 @@ Fetch a Shortcut story's full content (title, description, status, tasks, commen
 
 The user provides either:
 - A bare story ID: `68069`
-- A full Shortcut URL: `https://app.shortcut.com/nrc-health/story/68069/some-slug`
+- A full Shortcut URL: `https://app.shortcut.com/your-org/story/68069/some-slug`
 
 Extract the numeric story ID from `$ARGUMENTS`. If no argument provided, ask the user for a story ID or URL.
 

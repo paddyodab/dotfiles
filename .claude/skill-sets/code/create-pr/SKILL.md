@@ -18,7 +18,7 @@ Create a GitHub PR linked to a Shortcut story. Automates branch creation, PR tit
 
 The user provides either:
 - A bare story ID: `68069`
-- A full Shortcut URL: `https://app.shortcut.com/nrc-health/story/68069/some-slug`
+- A full Shortcut URL: `https://app.shortcut.com/your-org/story/68069/some-slug`
 
 Extract the numeric ID from `$ARGUMENTS`. If no argument provided, ask the user for a story ID or URL.
 

@@ -103,3 +103,30 @@ Each repo gets its own `thoughts/` directory, so streams are isolated per projec
 ## License
 
 MIT - Use it, modify it, share it.
+
+## Multi-Agent Pipeline
+
+A team-lead orchestration system with 7 specialized agents that coordinate via a message bus:
+
+| Agent | Role |
+|-------|------|
+| `team-lead` | Pipeline orchestrator — drives stories through planning → implementation → review |
+| `planner` | Architecture planning, task breakdown, scoping |
+| `coder` | Production code implementation |
+| `reviewer` | Code review, bug detection, style checking |
+| `secretary` | Commits, PRs, Shortcut updates, CRs, documentation |
+| `puddleglum` | Pre-mortem analysis — finds the assumption you didn't know you were making |
+| `doc-agent` | Documentation authoring (ADRs, runbooks, API docs, onboarding guides) |
+
+### Prerequisites
+
+- **msg.js**: The message bus runtime (`~/.agent/msg.js`) is required for inter-agent communication. See [agent-hub](https://github.com/paddyodab/agent-hub) for installation.
+- **OpenCode**: Agent definitions are designed for [OpenCode](https://opencode.ai) but the patterns are tool-agnostic.
+
+### Files
+
+- `.config/opencode/agents/*.md` — Agent definitions
+- `.config/opencode/AGENTS.md` — Global agent instructions
+- `.config/opencode/secretary-contract.md` — Delegation contract for secretary agent
+- `.config/opencode/team-lead-contracts.md` — Bus message contracts for pipeline coordination
+- `.claude/skill-sets/universal/agent-message-bus/` — Message bus skill
