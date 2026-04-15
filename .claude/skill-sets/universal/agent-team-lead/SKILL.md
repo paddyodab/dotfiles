@@ -1,7 +1,6 @@
 ---
 name: agent-team-lead
 description: "Pipeline orchestrator. Takes a Shortcut story and drives it through planning, implementation, and PR by coordinating Planner, Coder, and Reviewer via the message bus."
-model: opus
 allowed-tools:
   - Read
   - Write

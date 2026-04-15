@@ -1,7 +1,6 @@
 ---
 name: agent-secretary
 description: "Clerical agent — handles commits, PRs, Shortcut updates, CRs, and documentation on behalf of Planner and Reviewer agents."
-model: haiku
 allowed-tools:
   - Read
   - Write
