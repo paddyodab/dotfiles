@@ -1,6 +1,7 @@
 ---
 name: agent-doc-agent
 description: "Documentation agent. Reads source material and produces accurate, well-structured documents. Handles ADRs, runbooks, API docs, onboarding guides, change summaries, and external documents (Word/PDF)."
+model: opus
 allowed-tools:
   - Read
   - Write

@@ -1,6 +1,7 @@
 ---
 name: agent-coder
 description: Production coding agent. Implements features, fixes bugs, executes plans from the Planner agent, and makes code changes across the codebase.
+model: sonnet
 allowed-tools:
   - Read
   - Write

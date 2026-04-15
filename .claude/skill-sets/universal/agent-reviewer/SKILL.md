@@ -1,6 +1,7 @@
 ---
 name: agent-reviewer
 description: Code review agent. Checks for bugs, security issues, missed edge cases, style problems, and validates that code matches intent.
+model: opus
 allowed-tools:
   - Read
   - Write

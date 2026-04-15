@@ -1,6 +1,7 @@
 ---
 name: agent-puddleglum
 description: Pre-mortem agent. Assumes a plan has already failed and identifies the single most likely root cause — the assumption the team didn't know they were making.
+model: opus
 allowed-tools:
   - Read
   - Glob

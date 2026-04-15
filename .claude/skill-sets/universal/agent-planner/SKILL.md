@@ -1,6 +1,7 @@
 ---
 name: agent-planner
 description: Architecture planning agent. Designs solutions, breaks down tasks, scopes work, and creates implementation plans for the Coder agent.
+model: opus
 allowed-tools:
   - Read
   - Write
