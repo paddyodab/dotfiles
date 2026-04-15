@@ -25,7 +25,7 @@ import { mkdirSync } from 'fs';
 const AGENT_DIR = join(homedir(), '.agent');
 const DB_PATH = join(AGENT_DIR, 'messages.db');
 
-const VALID_AGENTS = ['planner', 'coder', 'reviewer', 'puddleglum', 'team-lead'];
+const VALID_AGENTS = ['planner', 'coder', 'reviewer', 'puddleglum', 'team-lead', 'secretary', 'doc-agent'];
 const VALID_TYPES = ['plan_feedback', 'diff_feedback', 'question', 'approval', 'info', 'task_request'];
 const VALID_STATUSES = ['unread', 'read', 'addressed'];
 const VALID_SCOPES = ['session', 'global'];
@@ -641,11 +641,21 @@ const commands = {
         }
 
         const now = new Date().toISOString();
-        db.prepare(`
-            INSERT INTO messages
-                (id, thread_id, parent_id, from_agent, to_agent, type, severity, ref, body, status, created_at, scope, session_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unread', ?, ?, ?)
-        `).run(id, parent.thread_id, parentId, from, to, parent.type, severity, parent.ref, flags.body, now, scope, sessionId);
+        const tx = db.transaction(() => {
+            db.prepare(`
+                INSERT INTO messages
+                    (id, thread_id, parent_id, from_agent, to_agent, type, severity, ref, body, status, created_at, scope, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unread', ?, ?, ?)
+            `).run(id, parent.thread_id, parentId, from, to, parent.type, severity, parent.ref, flags.body, now, scope, sessionId);
+            assertInvariants(db);
+        });
+        try {
+            tx();
+        } catch (err) {
+            db.close();
+            console.error(`Failed to reply: ${err.message}`);
+            process.exit(1);
+        }
         db.close();
 
         if (flags.json) {

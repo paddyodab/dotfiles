@@ -135,7 +135,7 @@ Right? (press enter to save, or describe a correction)
 
 Accept "y", "yes", or empty input as confirmation. If they describe a correction, apply it and re-show before saving.
 
-### Step 4: Write to KB
+### Step 3: Write to KB
 
 Determine KB path (already validated in Step 0):
 
@@ -154,7 +154,7 @@ Construct the JSONL entry — use the extracted values, JSON-encode strings prop
 echo "{\"type\":\"decision\",\"domain\":\"DOMAIN\",\"chose\":\"CHOSE\",\"alternatives\":[ALTERNATIVES_JSON],\"why\":\"WHY\",\"stage\":\"STAGE\",\"project\":\"$PROJECT\",\"date\":\"$DATE\",\"source\":\"session\"}" >> "$KB/decisions/decisions.jsonl"
 ```
 
-### Step 5: Commit and Push
+### Step 4: Commit and Push
 
 Use the bash tool:
 
@@ -164,7 +164,7 @@ cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN
 
 If push fails (no remote, offline), skip silently — the entry is written locally and will sync next push.
 
-### Step 6: Confirm
+### Step 5: Confirm
 
 Report to user:
 
