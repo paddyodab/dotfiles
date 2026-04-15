@@ -115,6 +115,30 @@ For each contract:
 - Expect exact required response fields
 - Treat missing required fields as malformed response
 
+### Sending messages — concrete syntax
+
+```bash
+# Write body to temp file first (avoids heredoc quoting issues)
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Implement feature X
+STORY_ID: sc-12345
+REPOS: ~/repos/my-project
+CONSUMER_ID: coder_pipeline_sc-12345
+EOF
+
+# Send using positional args (preferred)
+bun ~/.agent/msg.js send team-lead coder task_request \
+  --body "$(cat /tmp/msg-body.txt)" \
+  --scope session --session <session_id>
+
+# Flag form also works: --from, --to, --type
+bun ~/.agent/msg.js send --from team-lead --to coder --type task_request \
+  --body "$(cat /tmp/msg-body.txt)" \
+  --scope session --session <session_id>
+```
+
+**Always write message bodies to a temp file first.** Inline heredocs inside `--body "$(cat <<'EOF' ...)"` break on nested quotes.
+
 Consumer bootstrap pattern for task-tool-spawned agents:
 1. `register <role>_pipeline_<story-id> <role>`
 2. `enroll <session_id> <role>_pipeline_<story-id>`

@@ -33,7 +33,7 @@ const VALID_SESSION_STATUSES = ['active', 'complete', 'failed'];
 const VALID_CONSUMER_STATUSES = ['idle', 'enrolled', 'busy'];
 
 const KNOWN_VALUE_FLAGS = new Set([
-    '--body', '--ref', '--note', '--status', '--to',
+    '--body', '--ref', '--note', '--status', '--to', '--type', '--from',
     '--scope', '--session', '--consumer', '--role',
 ]);
 const KNOWN_BOOL_FLAGS = new Set(['--blocking', '--dry-run', '--json']);
@@ -539,7 +539,12 @@ const commands = {
 
     send(args) {
         const { flags, positional } = parseFlags(args);
-        const [from, to, type] = positional;
+        // Accept both positional and flag forms:
+        //   msg send <from> <to> <type> --body "..."
+        //   msg send --from <from> --to <to> --type <type> --body "..."
+        const from = positional[0] || flags.from;
+        const to   = positional[1] || flags.to;
+        const type = positional[2] || flags.type;
         if (!from || !to || !type) {
             console.error('Usage: msg send <from> <to> <type> --body "..." [--ref <ref>] [--blocking] [--scope global|session] [--session <id>] [--json]');
             process.exit(1);
