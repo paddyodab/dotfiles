@@ -75,23 +75,30 @@ Run exactly one story at a time.
 <invocation_protocol>
 ## Thin Prompt Pattern (Mandatory)
 
-Always spawn sub-agents via the Task tool with this exact fixed prompt:
+Always spawn sub-agents via the Task tool. The prompt must name the role skill
+so the subagent adopts the correct persona. Use this template:
 
 ```text
-You have a blocking message in your inbox from team-lead.
-Load the agent-message-bus skill, check your inbox, and process it.
+You are the {role} agent. Load the agent-{role} and agent-message-bus skills,
+then check your inbox and process the blocking message from team-lead.
+```
+
+Example for reviewer:
+```text
+You are the reviewer agent. Load the agent-reviewer and agent-message-bus skills,
+then check your inbox and process the blocking message from team-lead.
 ```
 
 Do not include story context in the Task prompt. All context must be on the message bus.
 
 ### Why
-This prevents reward hijacking and self-confirming loops. If Team Lead pre-frames analysis in the Task prompt, sub-agent output can mirror Team Lead bias. Bus-only context preserves independent reasoning.
+This prevents reward hijacking and self-confirming loops. If Team Lead pre-frames analysis in the Task prompt, sub-agent output can mirror Team Lead bias. Bus-only context preserves independent reasoning. The role skill is named (not story context) because Claude Code has no native agent picker — the subagent needs to know *what it is* before it can act.
 
 ### Subagent mapping
-- Planner work → Task tool with description referencing planner role
-- Code implementation/fixes → Task tool with description referencing coder role
-- Review/classification work → Task tool with description referencing reviewer role
-- Branch/commit/PR clerical actions → Task tool with description referencing secretary role
+- Planner work → Task tool, prompt names `agent-planner`
+- Code implementation/fixes → Task tool, prompt names `agent-coder`
+- Review/classification work → Task tool, prompt names `agent-reviewer`
+- Branch/commit/PR clerical actions → Task tool, prompt names `agent-secretary`
 </invocation_protocol>
 
 <bus_message_contracts>

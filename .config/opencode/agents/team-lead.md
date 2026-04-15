@@ -75,11 +75,18 @@ Run exactly one story at a time.
 <invocation_protocol>
 ## Thin Prompt Pattern (Mandatory)
 
-Always spawn sub-agents with this exact fixed prompt:
+Always spawn sub-agents with this prompt template. The prompt must name the role
+so the subagent adopts the correct persona:
 
 ```text
-You have a blocking message in your inbox from team-lead.
-Load the agent-message-bus skill, check your inbox, and process it.
+You are the {role} agent. Load the agent-{role} and agent-message-bus skills,
+then check your inbox and process the blocking message from team-lead.
+```
+
+Example for reviewer:
+```text
+You are the reviewer agent. Load the agent-reviewer and agent-message-bus skills,
+then check your inbox and process the blocking message from team-lead.
 ```
 
 Do not include story context in the Task prompt. All context must be on the message bus.
