@@ -2,13 +2,50 @@
 
 Personal configuration files managed via symlinks.
 
-## Quick Start
+## Installation
+
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/paddyodab/dotfiles.git ~/dotfiles
 cd ~/dotfiles
+```
+
+**If you want your own fork:** Fork this repo on GitHub first, then clone your fork and set the remote:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+git remote add upstream https://github.com/paddyodab/dotfiles.git
+```
+
+### 2. Configure models (optional)
+
+If you want to use specific models for different agent tiers (premium/mid/fast), configure before installing:
+
+```bash
+cp agent-models.env.example agent-models.env
+# Edit agent-models.env with your preferred model IDs
+```
+
+Without this, agents use OpenCode's default model.
+
+### 3. Run the installer
+
+```bash
 ./install.sh
 ```
+
+This creates symlinks from standard config locations (`~/.config/opencode/`, `~/.pi/agent/`, etc.) to this repo.
+
+### 4. Re-running install.sh
+
+Run `./install.sh` again when:
+- You update `agent-models.env` (model IDs are injected at install time)
+- You pull upstream changes to agent definitions
+- You add new skill profiles
+
+The installer is idempotent — it skips symlinks that are already correct.
 
 ## What's Included
 
@@ -48,12 +85,30 @@ This keeps all config version controlled while applications see them in the stan
 dotfiles/
 ├── .config/
 │   └── opencode/
-│       └── commands/          # Opencode thought-stream commands
+│       ├── agents/                 # Agent definitions (planner, coder, reviewer, etc.)
+│       ├── commands/               # Opencode thought-stream commands
+│       ├── AGENTS.md               # Global agent instructions
+│       ├── secretary-contract.md   # Secretary delegation contract
+│       └── team-lead-contracts.md  # Team-lead pipeline contracts
+├── .claude/
+│   └── skill-sets/
+│       ├── code/                   # Code-focused skills
+│       ├── infra/                  # Infrastructure skills
+│       ├── researcher/             # Research skills
+│       └── universal/              # Universal skills (available to all profiles)
+├── .opencode/
+│   └── skill-sets/
+│       └── universal/              # OpenCode universal skills
 ├── .pi/
 │   └── agent/
-│       └── prompts/           # Pi thought-stream prompts
-├── install.sh                 # Setup script
-└── README.md                  # This file
+│       ├── prompts/                # Pi thought-stream prompts
+│       └── skills/
+│           └── universal/          # Pi universal skills
+├── agent/
+│   └── msg.js                      # Message bus CLI (inter-agent communication)
+├── agent-models.env.example        # Model tier configuration template
+├── install.sh                      # Setup script (symlinks config to home)
+└── README.md                       # This file
 ```
 
 ## Adding More Dotfiles
@@ -65,12 +120,9 @@ dotfiles/
 
 ## Syncing to New Machines
 
-```bash
-git clone https://github.com/paddyodab/dotfiles.git ~/dotfiles
-cd ~/dotfiles && ./install.sh
-```
-
-All your configs will be linked and ready to use!
+Follow the [Installation](#installation) steps above. On subsequent machines, remember to:
+1. Copy your `agent-models.env` if you configured custom models (not tracked in git)
+2. Run `./install.sh` to set up symlinks
 
 ## Updating Commands
 

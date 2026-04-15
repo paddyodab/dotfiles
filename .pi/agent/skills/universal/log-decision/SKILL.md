@@ -175,15 +175,13 @@ Construct the JSONL entry using bash (JSON-encode strings properly):
 echo "{\"type\":\"decision\",\"domain\":\"DOMAIN\",\"chose\":\"CHOSE\",\"alternatives\":[ALTERNATIVES_JSON],\"why\":\"WHY\",\"stage\":\"STAGE\",\"project\":\"$PROJECT\",\"date\":\"$DATE\",\"source\":\"session\"}" >> "$KB/decisions/decisions.jsonl"
 ```
 
-### Step 4: Commit and Push
+### Step 4: Commit to KB
 
 Use bash:
 
 ```bash
-cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN — CHOSE" && git push
+cd "$KB" && git add decisions/decisions.jsonl && git commit -m "decision: DOMAIN — CHOSE"
 ```
-
-If push fails (no remote, offline), skip silently — the entry is written locally and will sync next push.
 
 ### Step 5: Confirm
 
@@ -201,7 +199,7 @@ Report to user:
 - **Zero input in the common case** — everything pulled from context
 - **One question max** — only ask if `why` is absent from the session
 - **Confirmation is the safety valve** — you see exactly what gets written before it's committed
-- **Push is best-effort** — local write always succeeds first
+- **Local-only** — commit to KB repo, user pushes when ready
 - **JSONL format** — one entry per line, grepable, ingestible into a QMD collection later
 
 ## Good Triggers

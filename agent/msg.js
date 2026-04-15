@@ -839,6 +839,7 @@ const commands = {
         let deletedThreads = 0;
         let deletedMessages = 0;
         let resetConsumers = 0;
+        let archivedMessages = 0;
 
         if (!dryRun) {
             const tx = db.transaction(() => {
@@ -852,6 +853,13 @@ const commands = {
                         WHERE consumer_id = ?
                     `).run(new Date().toISOString(), consumer.consumer_id);
                     if (result.changes > 0) resetConsumers++;
+                }
+                for (const msg of stalePendingGlobal) {
+                    db.prepare(`
+                        UPDATE messages SET status = 'addressed', addressed_at = ?, addressed_note = ?
+                        WHERE id = ?
+                    `).run(new Date().toISOString(), 'auto-cleaned: no idle consumer available', msg.id);
+                    archivedMessages++;
                 }
                 assertInvariants(db);
             });
@@ -875,7 +883,7 @@ const commands = {
         for (const c of stuckConsumers) {
             console.log(`  consumer=${c.consumer_id}  role=${c.role}  status=${c.status}  session=${c.session_id || 'null'}`);
         }
-        console.log(`Stale pending global messages with no idle consumer: ${stalePendingGlobal.length}`);
+        console.log(`Stale pending global messages with no idle consumer: ${stalePendingGlobal.length}${dryRun ? ' (would archive)' : ` (archived: ${archivedMessages})`}`);
         for (const msg of stalePendingGlobal) {
             console.log(`  message=${msg.id}  to=${msg.to_agent}  thread=${msg.thread_id}${msg.ref ? `  ref=${msg.ref}` : ''}  created=${msg.created_at}`);
         }

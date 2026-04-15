@@ -21,6 +21,12 @@ link_file() {
         mv "$dest" "$dest.backup.$(date +%Y%m%d%H%M%S)"
     fi
 
+    # Already linked correctly — skip
+    if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
+        echo "   ✔ Already linked: $dest"
+        return
+    fi
+
     # Remove existing symlink
     if [ -L "$dest" ]; then
         rm "$dest"
@@ -133,6 +139,12 @@ install_agents() {
         esac
     }
 
+    # Clean out unmanaged agents before installing
+    if [ -d "$dest_dir" ]; then
+        echo "   🧹 Cleaning existing agents..."
+        rm -f "$dest_dir"/*.md
+    fi
+
     local found=0
     for src in "$src_dir"/*.md; do
         [ -f "$src" ] || continue
@@ -154,7 +166,12 @@ install_agents() {
                 NR==1 && /^---$/ { print; print "model: " m; next }
                 { print }
             ' "$src" > "$dest"
-            echo "   ✅ Installed agent: $name (model: $model)"
+            # Warn if injection failed due to missing frontmatter
+            if ! head -1 "$src" | grep -q '^---$'; then
+                echo "   ⚠️  $name has no frontmatter — model not injected"
+            else
+                echo "   ✅ Installed agent: $name (model: $model)"
+            fi
         else
             cp "$src" "$dest"
             echo "   ✅ Installed agent: $name (using OpenCode default model)"
