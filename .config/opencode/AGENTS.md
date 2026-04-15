@@ -15,12 +15,12 @@ Optimize for: correctness, small verifiable changes, and fast iteration.
 
 ## 2) Standard Workflow (Default)
 1. Restate goal in 1–2 lines.
-2. **Search learnings FIRST** — `learnings_search(query=...)` and/or `learnings_search_by_project(project=..., query=...)` for relevant mistakes, patterns, and context before writing any code. Mention what you found (or that nothing was relevant).
+2. **Check learnings FIRST** — read `~/.agent/learnings.md` if it exists and scan for relevant past mistakes, patterns, or context. Mention what you found (or that nothing was relevant).
 3. Identify the smallest set of files/components likely involved.
 4. Propose a short plan (3–7 steps).
 5. Implement incrementally.
 6. Verify (tests/lint/typecheck as applicable).
-7. **Store new learnings** — after completing work, add any new insights, mistakes, or project context to the learnings DB.
+7. **Record learnings** — after completing substantial work, append a brief note to `~/.agent/learnings.md` (what you learned, what surprised you, what to avoid next time).
 8. Report back with:
    - What changed (bullets)
    - Why it changed
@@ -67,35 +67,13 @@ Optimize for: correctness, small verifiable changes, and fast iteration.
 - This applies to all commands that send data to a remote: `git push`, `gh repo create`, `gh pr create` (which implies a push), etc.
 - Local operations (commit, branch, merge, rebase) are fine without asking.
 
-## 8) Learnings & Quality Improvement
-Use the `learnings` MCP tools to continuously improve work quality:
+## 8) Learnings
+A plain file at `~/.agent/learnings.md` accumulates institutional knowledge across sessions.
 
-### When to use learnings tools:
-- **Before starting**: Search `learnings` for relevant past mistakes, patterns, or context about similar tasks
-- **During implementation** — search `learnings` at these decision triggers:
-  - **Choosing a pattern** — before picking an approach (class vs function, flush vs commit, error handling strategy, etc.)
-  - **Something surprised you** — unexpected error, tool behavior, or test failure
-  - **Touching shared infrastructure** — message bus, CI scripts, deployment tools, DB session management
-  - **You're about to reason from scratch** — if you'd say "let me think about this" or "let me look into this," search learnings first. Past sessions may have already worked through the same problem.
-  - **You're not sure** — if you'd ask a teammate, search learnings first
-- **After completing**: Store important insights, patterns, mistakes, and project context in `learnings`
-- **After completing a substantial task**: Save a conversation summary (`learnings_add_conversation_summary`) capturing what was done, key decisions made, and any unfinished work. A task is "substantial" if it involved code changes, debugging, multi-step investigation, or design decisions. Include the project name and relevant tags so future sessions can find it.
+- **Before starting**: read it and scan for relevant context. If the file doesn't exist, skip.
+- **After substantial work**: append a brief entry — what you learned, what surprised you, what to avoid. Keep entries short (3–5 lines). Use a `## date — topic` heading.
 
-### How to use:
-```
-learnings_search(query="authentication pattern") to find past solutions
-learnings_add_learning(title=..., content=...) for patterns you discover
-learnings_add_mistake(title=..., description=..., lesson=...) to record pitfalls
-learnings_add_project_context(project_name=..., context=...) for project conventions
-learnings_add_conversation_summary(title=..., summary=...) to capture session highlights
-learnings_search_by_project(project=..., query=...) to search within a specific project
-```
-
-### Quality Benefits:
-- Avoid repeating past mistakes across projects
-- Reuse proven design patterns and solutions
-- Maintain project context and conventions
-- Build institutional knowledge over time
+No external tools required. The file is human-readable and editable. If you want richer search, point any text search tool at it.
 
 ## 9) Agent Message Bus
 - If the user says **"msg"**, load the `agent-message-bus` skill and check your inbox.

@@ -1,6 +1,5 @@
 ---
 description: "Clerical agent — handles commits, PRs, Shortcut updates, CRs, and documentation on behalf of Planner and Reviewer agents"
-model: github-copilot/gpt-5.3-codex
 color: "#D4A574"
 tools:
   read: true

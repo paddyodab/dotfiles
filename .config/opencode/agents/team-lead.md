@@ -1,6 +1,5 @@
 ---
 description: "Pipeline orchestrator. Takes a Shortcut story and drives it through planning, implementation, and PR by coordinating Planner, Coder, and Reviewer via the message bus."
-model: github-copilot/claude-opus-4.6
 color: "#F59E0B"
 tools:
   read: true

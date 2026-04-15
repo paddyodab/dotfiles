@@ -105,6 +105,74 @@ list_profiles() {
     done
 }
 
+# Install agent files with optional model injection from agent-models.env.
+# Copies (not symlinks) so model IDs can be injected per-machine without
+# touching the source files. Re-run install.sh to pick up prompt updates.
+install_agents() {
+    local src_dir="$DOTFILES_DIR/.config/opencode/agents"
+    local dest_dir="$HOME/.config/opencode/agents"
+    mkdir -p "$dest_dir"
+
+    # Load model tiers if present
+    local premium_model="" mid_model="" fast_model=""
+    if [ -f "$DOTFILES_DIR/agent-models.env" ]; then
+        # shellcheck disable=SC1090
+        source "$DOTFILES_DIR/agent-models.env"
+        premium_model="${PREMIUM_MODEL:-}"
+        mid_model="${MID_MODEL:-}"
+        fast_model="${FAST_MODEL:-}"
+    fi
+
+    # tier_for <filename> → premium | mid | fast | ""
+    tier_for() {
+        case "$(basename "$1" .md)" in
+            team-lead|reviewer|planner|puddleglum|doc-agent) echo "premium" ;;
+            coder)     echo "mid" ;;
+            secretary) echo "fast" ;;
+            *)         echo "" ;;
+        esac
+    }
+
+    local found=0
+    for src in "$src_dir"/*.md; do
+        [ -f "$src" ] || continue
+        local name
+        name="$(basename "$src")"
+        local dest="$dest_dir/$name"
+        local tier
+        tier="$(tier_for "$src")"
+        local model=""
+        case "$tier" in
+            premium) model="$premium_model" ;;
+            mid)     model="$mid_model" ;;
+            fast)    model="$fast_model" ;;
+        esac
+
+        if [ -n "$model" ]; then
+            # Inject model line into frontmatter (after opening ---)
+            awk -v m="$model" '
+                NR==1 && /^---$/ { print; print "model: " m; next }
+                { print }
+            ' "$src" > "$dest"
+            echo "   ✅ Installed agent: $name (model: $model)"
+        else
+            cp "$src" "$dest"
+            echo "   ✅ Installed agent: $name (using OpenCode default model)"
+        fi
+        found=1
+    done
+
+    if [ "$found" -eq 0 ]; then
+        echo "   (no agent files found in $src_dir)"
+    fi
+
+    if [ -z "$premium_model" ] && [ -z "$mid_model" ] && [ -z "$fast_model" ]; then
+        echo ""
+        echo "   💡 Tip: copy agent-models.env.example → agent-models.env and set"
+        echo "      model IDs to enable cost tiering. Then re-run ./install.sh."
+    fi
+}
+
 # --- Commands ---
 
 cmd_activate() {
@@ -151,9 +219,13 @@ cmd_install() {
     echo "🔗 Installing dotfiles..."
     echo ""
 
-    # Link opencode commands
-    echo "📦 Linking opencode commands..."
-    link_file "$DOTFILES_DIR/.config/opencode/commands" "$HOME/.config/opencode/commands"
+    # Link opencode config
+    echo "📦 Linking opencode config..."
+    link_file "$DOTFILES_DIR/.config/opencode/commands"              "$HOME/.config/opencode/commands"
+    link_file "$DOTFILES_DIR/.config/opencode/AGENTS.md"            "$HOME/.config/opencode/AGENTS.md"
+    install_agents
+    link_file "$DOTFILES_DIR/.config/opencode/secretary-contract.md" "$HOME/.config/opencode/secretary-contract.md"
+    link_file "$DOTFILES_DIR/.config/opencode/team-lead-contracts.md" "$HOME/.config/opencode/team-lead-contracts.md"
 
     # Link Pi prompts
     echo "📦 Linking Pi prompts..."
@@ -173,6 +245,10 @@ cmd_install() {
     # Link universal Pi skills
     echo "📦 Linking universal Pi skills..."
     link_profile_skills_pi "universal" "$HOME/.pi/agent/skills"
+
+    # Link agent message bus
+    echo "📦 Linking agent message bus..."
+    link_file "$DOTFILES_DIR/agent/msg.js" "$HOME/.agent/msg.js"
 
     echo ""
     echo "🎉 Dotfiles installed!"

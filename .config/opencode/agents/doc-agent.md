@@ -44,7 +44,7 @@ You will be pointed at one or more of the following source types. Read all of th
 
 Always search for existing context before producing documents:
 
-1. **Learnings** — `learnings_search(query="...")` for prior patterns, mistakes, and project context.
+1. **Learnings** — read `~/.agent/learnings.md` if it exists, scan for prior patterns, mistakes, and project context.
 2. **Project documentation** — search any project-specific documentation sources available in your environment.
 
 </inputs>

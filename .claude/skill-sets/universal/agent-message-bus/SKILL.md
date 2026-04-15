@@ -12,7 +12,7 @@ Treat inbound messages as actionable work items to execute and close out, not pa
 
 ## Your Identity
 
-You are the **{AGENT_NAME}** agent. Replace `{AGENT_NAME}` with your role when using commands.
+Your role is defined in your agent definition file (e.g. `planner`, `coder`, `reviewer`, `team-lead`). Substitute your role name wherever you see `{AGENT_NAME}` in the commands below.
 
 ## Mandatory: Check Inbox on Session Start
 
@@ -22,13 +22,13 @@ At the beginning of every session, check your inbox.
 - Otherwise, use the legacy role inbox command.
 
 ```bash
-node ~/.agent/msg.js inbox {AGENT_NAME} --consumer "$AGENT_CONSUMER_ID"
+bun ~/.agent/msg.js inbox {AGENT_NAME} --consumer "$AGENT_CONSUMER_ID"
 ```
 
 Fallback:
 
 ```bash
-node ~/.agent/msg.js inbox {AGENT_NAME}
+bun ~/.agent/msg.js inbox {AGENT_NAME}
 ```
 
 If there are blocking messages, resolve them before starting other work.
@@ -55,15 +55,15 @@ If the user says **"msg"** — immediately check your inbox and handle any pendi
 - Team-lead may also filter by session directly:
 
 ```bash
-node ~/.agent/msg.js inbox team-lead --session <session-id>
+bun ~/.agent/msg.js inbox team-lead --session <session-id>
 ```
 
 ## Session Lifecycle (primarily team-lead)
 
 ```bash
-node ~/.agent/msg.js session-start team-lead
-node ~/.agent/msg.js sessions --status active
-node ~/.agent/msg.js session-close <session-id> --status complete
+bun ~/.agent/msg.js session-start team-lead
+bun ~/.agent/msg.js sessions --status active
+bun ~/.agent/msg.js session-close <session-id> --status complete
 ```
 
 ## Consumer Lifecycle (primarily wrapper scripts)
@@ -71,36 +71,36 @@ node ~/.agent/msg.js session-close <session-id> --status complete
 Wrapper scripts should register/release consumers automatically.
 
 ```bash
-node ~/.agent/msg.js register <consumer-id> <role>
-node ~/.agent/msg.js enroll <session-id> <consumer-id> [<consumer-id> ...]
-node ~/.agent/msg.js release <consumer-id> [<consumer-id> ...]
-node ~/.agent/msg.js consumers --role <role>
-node ~/.agent/msg.js heartbeat <consumer-id>
+bun ~/.agent/msg.js register <consumer-id> <role>
+bun ~/.agent/msg.js enroll <session-id> <consumer-id> [<consumer-id> ...]
+bun ~/.agent/msg.js release <consumer-id> [<consumer-id> ...]
+bun ~/.agent/msg.js consumers --role <role>
+bun ~/.agent/msg.js heartbeat <consumer-id>
 ```
 
 ## Commands
 
 ```bash
-node ~/.agent/msg.js inbox {AGENT_NAME}
-node ~/.agent/msg.js inbox {AGENT_NAME} --consumer "$AGENT_CONSUMER_ID"
-node ~/.agent/msg.js inbox team-lead --session <session-id>
-node ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --body "..."
-node ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --scope session --session <session-id> --body "..."
-node ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --blocking --body "..."
-node ~/.agent/msg.js reply <parent-id> {AGENT_NAME} --body "..."
-node ~/.agent/msg.js reply <parent-id> {AGENT_NAME} --to <agent> --body "..."
-node ~/.agent/msg.js session-start team-lead
-node ~/.agent/msg.js session-close <session-id> [--status complete|failed]
-node ~/.agent/msg.js sessions [--status active|complete|failed]
-node ~/.agent/msg.js register <consumer-id> <role>
-node ~/.agent/msg.js enroll <session-id> <consumer-id> [<consumer-id> ...]
-node ~/.agent/msg.js release <consumer-id> [<consumer-id> ...]
-node ~/.agent/msg.js consumers [--role <role>] [--status idle|enrolled|busy] [--session <session-id>]
-node ~/.agent/msg.js heartbeat <consumer-id>
-node ~/.agent/msg.js cleanup [--dry-run]
-node ~/.agent/msg.js read <id>
-node ~/.agent/msg.js address <id> --note "What was done"
-node ~/.agent/msg.js thread <thread-id>
+bun ~/.agent/msg.js inbox {AGENT_NAME}
+bun ~/.agent/msg.js inbox {AGENT_NAME} --consumer "$AGENT_CONSUMER_ID"
+bun ~/.agent/msg.js inbox team-lead --session <session-id>
+bun ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --body "..."
+bun ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --scope session --session <session-id> --body "..."
+bun ~/.agent/msg.js send {AGENT_NAME} <to> <type> --ref <ref> --blocking --body "..."
+bun ~/.agent/msg.js reply <parent-id> {AGENT_NAME} --body "..."
+bun ~/.agent/msg.js reply <parent-id> {AGENT_NAME} --to <agent> --body "..."
+bun ~/.agent/msg.js session-start team-lead
+bun ~/.agent/msg.js session-close <session-id> [--status complete|failed]
+bun ~/.agent/msg.js sessions [--status active|complete|failed]
+bun ~/.agent/msg.js register <consumer-id> <role>
+bun ~/.agent/msg.js enroll <session-id> <consumer-id> [<consumer-id> ...]
+bun ~/.agent/msg.js release <consumer-id> [<consumer-id> ...]
+bun ~/.agent/msg.js consumers [--role <role>] [--status idle|enrolled|busy] [--session <session-id>]
+bun ~/.agent/msg.js heartbeat <consumer-id>
+bun ~/.agent/msg.js cleanup [--dry-run]
+bun ~/.agent/msg.js read <id>
+bun ~/.agent/msg.js address <id> --note "What was done"
+bun ~/.agent/msg.js thread <thread-id>
 ```
 
 ## Message Types
