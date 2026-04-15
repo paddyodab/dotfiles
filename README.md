@@ -87,24 +87,33 @@ dotfiles/
 │   └── opencode/
 │       ├── agents/                 # Agent definitions (planner, coder, reviewer, etc.)
 │       ├── commands/               # Opencode thought-stream commands
-│       ├── AGENTS.md               # Global agent instructions
-│       ├── secretary-contract.md   # Secretary delegation contract
-│       └── team-lead-contracts.md  # Team-lead pipeline contracts
+│       └── AGENTS.md               # Global agent instructions
 ├── .claude/
+│   ├── CLAUDE.md                   # Global agent instructions for Claude Code
 │   └── skill-sets/
 │       ├── code/                   # Code-focused skills
 │       ├── infra/                  # Infrastructure skills
 │       ├── researcher/             # Research skills
 │       └── universal/              # Universal skills (available to all profiles)
-├── .opencode/
-│   └── skill-sets/
-│       └── universal/              # OpenCode universal skills
+│           ├── agent-team-lead/    # 7 agent skills for Claude Code
+│           ├── agent-planner/      #   (mirrors OpenCode agent definitions
+│           ├── agent-coder/        #    as Claude Code skills)
+│           ├── agent-reviewer/
+│           ├── agent-secretary/
+│           ├── agent-puddleglum/
+│           ├── agent-doc-agent/
+│           ├── agent-message-bus/  # Message bus skill
+│           ├── log-decision/       # Decision logging skill
+│           └── ...                 # Other universal skills
 ├── .pi/
 │   └── agent/
 │       ├── prompts/                # Pi thought-stream prompts
 │       └── skills/
 │           └── universal/          # Pi universal skills
 ├── agent/
+│   ├── contracts/                  # Shared agent contracts (platform-agnostic)
+│   │   ├── secretary-contract.md   # Secretary delegation contract
+│   │   └── team-lead-contracts.md  # Pipeline coordination contracts
 │   └── msg.js                      # Message bus CLI (inter-agent communication)
 ├── agent-models.env.example        # Model tier configuration template
 ├── install.sh                      # Setup script (symlinks config to home)
@@ -170,15 +179,24 @@ A team-lead orchestration system with 7 specialized agents that coordinate via a
 | `puddleglum` | Pre-mortem analysis — finds the assumption you didn't know you were making |
 | `doc-agent` | Documentation authoring (ADRs, runbooks, API docs, onboarding guides) |
 
+### Supported Platforms
+
+| Platform | How agents are defined | Global instructions |
+|----------|----------------------|---------------------|
+| **OpenCode** | `.config/opencode/agents/*.md` (native agent system) | `.config/opencode/AGENTS.md` |
+| **Claude Code** | `.claude/skill-sets/universal/agent-*/SKILL.md` (skills-as-agents via Task tool) | `.claude/CLAUDE.md` |
+
 ### Prerequisites
 
 - **msg.js**: The message bus runtime (`~/.agent/msg.js`) is required for inter-agent communication. See [agent-hub](https://github.com/paddyodab/agent-hub) for installation.
-- **OpenCode**: Agent definitions are designed for [OpenCode](https://opencode.ai) but the patterns are tool-agnostic.
+- **OpenCode** or **Claude Code**: The agent team works on both platforms. OpenCode has native multi-agent support; Claude Code uses skills loaded via the Task tool.
 
 ### Files
 
-- `.config/opencode/agents/*.md` — Agent definitions
-- `.config/opencode/AGENTS.md` — Global agent instructions
-- `.config/opencode/secretary-contract.md` — Delegation contract for secretary agent
-- `.config/opencode/team-lead-contracts.md` — Bus message contracts for pipeline coordination
+- `.config/opencode/agents/*.md` — OpenCode agent definitions
+- `.config/opencode/AGENTS.md` — OpenCode global agent instructions
+- `.claude/skill-sets/universal/agent-*/SKILL.md` — Claude Code agent skills (7 agents)
+- `.claude/CLAUDE.md` — Claude Code global agent instructions
+- `agent/contracts/secretary-contract.md` — Delegation contract for secretary agent
+- `agent/contracts/team-lead-contracts.md` — Bus message contracts for pipeline coordination
 - `.claude/skill-sets/universal/agent-message-bus/` — Message bus skill

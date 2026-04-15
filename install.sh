@@ -124,9 +124,21 @@ install_agents() {
     if [ -f "$DOTFILES_DIR/agent-models.env" ]; then
         # shellcheck disable=SC1090
         source "$DOTFILES_DIR/agent-models.env"
-        premium_model="${PREMIUM_MODEL:-}"
-        mid_model="${MID_MODEL:-}"
-        fast_model="${FAST_MODEL:-}"
+
+        # Provider-based resolution (new format)
+        if [ -n "${AGENT_PROVIDER:-}" ]; then
+            local provider_upper
+            provider_upper="$(echo "$AGENT_PROVIDER" | tr '[:lower:]-' '[:upper:]_')"
+            eval "premium_model=\${${provider_upper}_PREMIUM:-}"
+            eval "mid_model=\${${provider_upper}_MID:-}"
+            eval "fast_model=\${${provider_upper}_FAST:-}"
+            echo "   Using provider: $AGENT_PROVIDER"
+        else
+            # Legacy format (backward compatible)
+            premium_model="${PREMIUM_MODEL:-}"
+            mid_model="${MID_MODEL:-}"
+            fast_model="${FAST_MODEL:-}"
+        fi
     fi
 
     # tier_for <filename> → premium | mid | fast | ""
@@ -236,52 +248,61 @@ cmd_install() {
     echo "🔗 Installing dotfiles..."
     echo ""
 
+    # Link shared agent infrastructure
+    echo "📦 Linking agent infrastructure..."
+    link_file "$DOTFILES_DIR/agent/msg.js" "$HOME/.agent/msg.js"
+    link_file "$DOTFILES_DIR/agent/contracts/secretary-contract.md" "$HOME/.agent/contracts/secretary-contract.md"
+    link_file "$DOTFILES_DIR/agent/contracts/team-lead-contracts.md" "$HOME/.agent/contracts/team-lead-contracts.md"
+
     # Link opencode config
     echo "📦 Linking opencode config..."
     link_file "$DOTFILES_DIR/.config/opencode/commands"              "$HOME/.config/opencode/commands"
     link_file "$DOTFILES_DIR/.config/opencode/AGENTS.md"            "$HOME/.config/opencode/AGENTS.md"
     install_agents
-    link_file "$DOTFILES_DIR/.config/opencode/secretary-contract.md" "$HOME/.config/opencode/secretary-contract.md"
-    link_file "$DOTFILES_DIR/.config/opencode/team-lead-contracts.md" "$HOME/.config/opencode/team-lead-contracts.md"
+    # OpenCode contracts — symlink to shared location
+    link_file "$DOTFILES_DIR/agent/contracts/secretary-contract.md" "$HOME/.config/opencode/secretary-contract.md"
+    link_file "$DOTFILES_DIR/agent/contracts/team-lead-contracts.md" "$HOME/.config/opencode/team-lead-contracts.md"
 
-    # Link Pi prompts
-    echo "📦 Linking Pi prompts..."
-    link_file "$DOTFILES_DIR/.pi/agent/prompts" "$HOME/.pi/agent/prompts"
-
-    # Link Claude Code scripts
-    echo "📦 Linking Claude Code scripts..."
+    # Link Claude Code global config
+    echo "📦 Linking Claude Code config..."
+    link_file "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
     for script in "$DOTFILES_DIR/.claude/"*.sh; do
         [ -f "$script" ] || continue
         link_file "$script" "$HOME/.claude/$(basename "$script")"
     done
 
-    # Link universal Claude Code skills
+    # Link universal Claude Code skills (includes agent-* skills)
     echo "📦 Linking universal Claude Code skills..."
     link_profile_skills "universal" "$HOME/.claude/skills"
 
-    # Link universal Pi skills
-    echo "📦 Linking universal Pi skills..."
+    # Link Pi prompts and skills
+    echo "📦 Linking Pi prompts and skills..."
+    link_file "$DOTFILES_DIR/.pi/agent/prompts" "$HOME/.pi/agent/prompts"
     link_profile_skills_pi "universal" "$HOME/.pi/agent/skills"
-
-    # Link agent message bus
-    echo "📦 Linking agent message bus..."
-    link_file "$DOTFILES_DIR/agent/msg.js" "$HOME/.agent/msg.js"
 
     echo ""
     echo "🎉 Dotfiles installed!"
     echo ""
-    echo "Commands now available:"
+    echo "Platforms configured:"
     echo ""
-    echo "Opencode:"
-    echo "   /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
+    echo "  OpenCode:"
+    echo "    Agents: ~/.config/opencode/agents/ (7 agents with model tiering)"
+    echo "    Commands: /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
     echo ""
-    echo "Pi:"
-    echo "   /which-stream, /new-stream, /load-stream, /switch-stream, /note-that"
-    echo "   Universal skills linked to ~/.pi/agent/skills/"
+    echo "  Claude Code:"
+    echo "    Global instructions: ~/.claude/CLAUDE.md"
+    echo "    Agent skills: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
+    echo "                  agent-secretary, agent-puddleglum, agent-doc-agent"
+    echo "    Skills: ~/.claude/skills/"
+    echo "    Activate a profile: ./install.sh activate <profile> [project-dir]"
     echo ""
-    echo "Claude Code:"
-    echo "   Universal skills linked to ~/.claude/skills/"
-    echo "   Activate a profile: ./install.sh activate <profile> [project-dir]"
+    echo "  Pi:"
+    echo "    Prompts: ~/.pi/agent/prompts/"
+    echo "    Skills: ~/.pi/agent/skills/"
+    echo ""
+    echo "  Shared:"
+    echo "    Message bus: ~/.agent/msg.js"
+    echo "    Contracts: ~/.agent/contracts/"
     echo ""
     list_profiles
 }

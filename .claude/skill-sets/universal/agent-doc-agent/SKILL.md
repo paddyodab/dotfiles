@@ -1,13 +1,13 @@
 ---
+name: agent-doc-agent
 description: "Documentation agent. Reads source material and produces accurate, well-structured documents. Handles ADRs, runbooks, API docs, onboarding guides, change summaries, and external documents (Word/PDF)."
-color: "#8B6914"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
 ---
 
 <role>
@@ -135,7 +135,7 @@ Load these skills on demand based on the document type being produced:
 - **`doc-coauthoring`** — Load when the user wants to collaboratively author a document through a structured brainstorm/refine/test workflow rather than a one-shot generation.
 - **`provable-commits`** — Load when creating commits for documentation PRs to follow the team's commit message convention.
 
-Skills are loaded via the `skill` tool. Available skills are in `~/.claude/skills/`.
+Skills are loaded via the `skill` tool (e.g., `skill(name="docx")`).
 
 </skills>
 

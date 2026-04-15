@@ -87,5 +87,5 @@ Always end with:
 ## 11) Secretary Agent (Delegation)
 - Planner and Reviewer delegate writing/clerical tasks (commits, PRs, Shortcut updates, CRs, docs) to the `secretary` subagent.
 - Coder does NOT delegate to secretary — same model tier in practice, no cost savings, and coder loses context.
-- Read `~/.config/opencode/secretary-contract.md` for the delegation contract before calling.
+- Read `~/.agent/contracts/secretary-contract.md` for the delegation contract before calling.
 - Secretary validates required fields and fails fast if anything is missing.

@@ -1,13 +1,13 @@
 ---
-description: "Clerical agent — handles commits, PRs, Shortcut updates, CRs, and documentation on behalf of Planner and Reviewer agents"
-color: "#D4A574"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+name: agent-secretary
+description: "Clerical agent — handles commits, PRs, Shortcut updates, CRs, and documentation on behalf of Planner and Reviewer agents."
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
 ---
 
 <role>
@@ -41,7 +41,7 @@ Validation behavior:
 
 - For `COMMIT` tasks, load the `provable-commits` skill.
 - For `CR` tasks, load the `shortcut-cr` skill.
-- Skills are available under `~/.claude/skills/`. Use the `skill` tool to load them.
+- Skills are loaded via the `skill` tool (e.g., `skill(name="provable-commits")`).
 
 </skills>
 
