@@ -253,12 +253,36 @@ install_claude_agents() {
     fi
 }
 
+# ── Hermes agent installer ────────────────────────────────────────────────────
+# Symlinks agent-* skill directories from dotfiles .hermes/skills/ into
+# ~/.hermes/skills/. Hermes loads skills by name via skill_view(), so symlinks
+# are sufficient (no copy+inject needed — Hermes doesn't use model frontmatter).
+install_hermes_agents() {
+    local src_dir="$DOTFILES_DIR/.hermes/skills"
+    local dest_dir="$HOME/.hermes/skills"
+    mkdir -p "$dest_dir"
+
+    local found=0
+    for skill_dir in "$src_dir"/agent-*/; do
+        [ -d "$skill_dir" ] || continue
+        local skill_name
+        skill_name="$(basename "$skill_dir")"
+        link_file "$skill_dir" "$dest_dir/$skill_name"
+        found=1
+    done
+
+    if [ "$found" -eq 0 ]; then
+        echo "   (no agent skills found in $src_dir)"
+    fi
+}
+
 # Check if any models are configured, show tip if not
 check_model_tip() {
     load_models
     local has_any=false
     for var in OPENCODE_PREMIUM OPENCODE_MID OPENCODE_FAST \
-               CLAUDE_CODE_PREMIUM CLAUDE_CODE_MID CLAUDE_CODE_FAST; do
+               CLAUDE_CODE_PREMIUM CLAUDE_CODE_MID CLAUDE_CODE_FAST \
+               HERMES_PREMIUM HERMES_MID HERMES_FAST; do
         [ -n "${!var:-}" ] && has_any=true && break
     done
     if [ "$has_any" = false ]; then
@@ -345,6 +369,10 @@ cmd_install() {
     echo "📦 Linking universal Claude Code skills..."
     link_profile_skills "universal" "$HOME/.claude/skills"
 
+    # Link Hermes agent skills
+    echo "📦 Installing Hermes agent skills..."
+    install_hermes_agents
+
     # Link Pi prompts and skills
     echo "📦 Linking Pi prompts and skills..."
     link_file "$DOTFILES_DIR/.pi/agent/prompts" "$HOME/.pi/agent/prompts"
@@ -366,6 +394,12 @@ cmd_install() {
     echo "                  agent-secretary, agent-puddleglum, agent-doc-agent"
     echo "    Skills: ~/.claude/skills/"
     echo "    Activate a profile: ./install.sh activate <profile> [project-dir]"
+    echo ""
+    echo "  Hermes:"
+    echo "    Agent skills: ~/.hermes/skills/ (symlinked)"
+    echo "    Agents: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
+    echo "            agent-secretary, agent-puddleglum, agent-doc-agent, agent-message-bus"
+    echo "    Load via: skill_view(name='agent-team-lead')"
     echo ""
     echo "  Pi:"
     echo "    Prompts: ~/.pi/agent/prompts/"

@@ -28,7 +28,7 @@ cp agent-models.env.example agent-models.env
 # Edit agent-models.env with your preferred model IDs
 ```
 
-Without this, agents use OpenCode's default model.
+Without this, agents use each platform's default model.
 
 ### 3. Run the installer
 
@@ -36,7 +36,7 @@ Without this, agents use OpenCode's default model.
 ./install.sh
 ```
 
-This creates symlinks from standard config locations (`~/.config/opencode/`, `~/.pi/agent/`, etc.) to this repo.
+This creates symlinks from standard config locations (`~/.config/opencode/`, `~/.hermes/skills/`, `~/.pi/agent/`, etc.) to this repo.
 
 ### 4. Re-running install.sh
 
@@ -105,6 +105,16 @@ dotfiles/
 │           ├── agent-message-bus/  # Message bus skill
 │           ├── log-decision/       # Decision logging skill
 │           └── ...                 # Other universal skills
+├── .hermes/
+│   └── skills/                    # Hermes agent skills
+│       ├── agent-team-lead/       # 8 agent skills for Hermes
+│       ├── agent-planner/         #   (mirrors OpenCode/Claude Code agents
+│       ├── agent-coder/           #    as Hermes skills loaded via skill_view)
+│       ├── agent-reviewer/
+│       ├── agent-secretary/
+│       ├── agent-puddleglum/
+│       ├── agent-doc-agent/
+│       └── agent-message-bus/     # Message bus skill
 ├── .pi/
 │   └── agent/
 │       ├── prompts/                # Pi thought-stream prompts
@@ -185,11 +195,12 @@ A team-lead orchestration system with 7 specialized agents that coordinate via a
 |----------|----------------------|---------------------|
 | **OpenCode** | `.config/opencode/agents/*.md` (native agent system) | `.config/opencode/AGENTS.md` |
 | **Claude Code** | `.claude/skill-sets/universal/agent-*/SKILL.md` (skills-as-agents via Task tool) | `.claude/CLAUDE.md` |
+| **Hermes** | `.hermes/skills/agent-*/SKILL.md` (skills loaded via `skill_view()`, agents spawned via `delegate_task`) | N/A (skill-based) |
 
 ### Prerequisites
 
 - **msg.js**: The message bus runtime (`~/.agent/msg.js`) is required for inter-agent communication. See [agent-hub](https://github.com/paddyodab/agent-hub) for installation.
-- **OpenCode** or **Claude Code**: The agent team works on both platforms. OpenCode has native multi-agent support; Claude Code uses skills loaded via the Task tool.
+- **OpenCode**, **Claude Code**, or **Hermes**: The agent team works on all three platforms. OpenCode has native multi-agent support; Claude Code uses skills loaded via the Task tool; Hermes uses skills loaded via `skill_view()` and agents spawned via `delegate_task()`.
 
 ### Files
 
@@ -197,6 +208,8 @@ A team-lead orchestration system with 7 specialized agents that coordinate via a
 - `.config/opencode/AGENTS.md` — OpenCode global agent instructions
 - `.claude/skill-sets/universal/agent-*/SKILL.md` — Claude Code agent skills (7 agents)
 - `.claude/CLAUDE.md` — Claude Code global agent instructions
+- `.hermes/skills/agent-*/SKILL.md` — Hermes agent skills (8 skills, symlinked to ~/.hermes/skills/)
 - `agent/contracts/secretary-contract.md` — Delegation contract for secretary agent
 - `agent/contracts/team-lead-contracts.md` — Bus message contracts for pipeline coordination
-- `.claude/skill-sets/universal/agent-message-bus/` — Message bus skill
+- `.claude/skill-sets/universal/agent-message-bus/` — Message bus skill (Claude Code)
+- `.hermes/skills/agent-message-bus/` — Message bus skill (Hermes)
