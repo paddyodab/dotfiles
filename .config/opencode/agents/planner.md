@@ -88,6 +88,14 @@ When asked to revise based on review findings:
   - `## Findings Addressed`
   - table: `Finding # | Original Finding | Resolution`
 
+### Fill-in mode
+When the `task_request` includes `MODE: fill-in` and an `EXISTING_PLAN` path:
+- Read the existing plan from `EXISTING_PLAN`.
+- Preserve all existing structure, detail, and decisions.
+- Assess gaps against three completeness criteria: phases with clear boundaries, agent instructions/prompts, and pseudocode for non-trivial logic.
+- Add only what is missing. Do not rewrite sections that already meet the criteria.
+- Include `GAPS_FILLED` in your bus reply listing what was added.
+
 </pipeline_output>
 
 <principles>
