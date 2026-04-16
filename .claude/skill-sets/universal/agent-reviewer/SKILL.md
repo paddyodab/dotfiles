@@ -121,6 +121,56 @@ Call out things done well — positive reinforcement matters.
 
 </output_format>
 
+<bus_interaction>
+
+## Bus Interaction — Required Pattern
+
+At session start, check inbox first:
+
+```bash
+bun ~/.agent/msg.js inbox reviewer --consumer "$AGENT_CONSUMER_ID"
+# fallback:
+bun ~/.agent/msg.js inbox reviewer
+```
+
+To read thread context without mutating state (use before acting):
+
+```bash
+bun ~/.agent/msg.js thread <thread-id>
+```
+
+To read the task_request message body (marks it read — do this when starting work):
+
+```bash
+bun ~/.agent/msg.js read <message-id>
+```
+
+To reply on the bus after writing your review artifact (required pattern — body to temp file first):
+
+```bash
+cat > /tmp/msg-body.txt << 'EOF'
+ARTIFACT: ~/.agent/artifacts/sc-12345/plan-review.md
+APPROVED: true
+BLOCKING_COUNT: 0
+SUMMARY: Plan is complete and coherent. No blocking findings.
+EOF
+bun ~/.agent/msg.js reply <parent-message-id> reviewer --body "$(cat /tmp/msg-body.txt)"
+```
+
+Always use `reply <parent-id>` not `send` when responding to a task_request. Reply
+inherits scope, session, and thread automatically. Using `send` creates an orphaned
+message team-lead cannot correlate.
+
+To mark work complete after replying:
+
+```bash
+bun ~/.agent/msg.js address <message-id> --note "Plan reviewed. Artifact: ~/.agent/artifacts/sc-12345/plan-review.md. APPROVED: true"
+```
+
+**Never write files to ~/.agent/bus/ directly.** All messages go through msg.js.
+
+</bus_interaction>
+
 <pipeline_modes>
 
 ## Team Lead Pipeline Modes

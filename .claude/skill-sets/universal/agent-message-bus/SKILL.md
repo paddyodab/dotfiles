@@ -78,6 +78,68 @@ bun ~/.agent/msg.js consumers --role <role>
 bun ~/.agent/msg.js heartbeat <consumer-id>
 ```
 
+## Sending Messages — Required Pattern
+
+Never inline message bodies directly in shell commands. Inline heredocs break on nested
+quotes, newlines, and special characters. Always write the body to a temp file first.
+
+### send (new message to an agent)
+
+```bash
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Create implementation plan
+STORY_ID: sc-12345
+STORY_TITLE: Add user notifications
+ARTIFACT_DIR: ~/.agent/artifacts/sc-12345/
+EOF
+bun ~/.agent/msg.js send team-lead planner task_request \
+  --ref sc-12345 \
+  --blocking \
+  --scope session --session <session-id> \
+  --body "$(cat /tmp/msg-body.txt)"
+```
+
+### reply (respond on existing thread — preferred over send)
+
+```bash
+cat > /tmp/msg-body.txt << 'EOF'
+ARTIFACT: ~/.agent/artifacts/sc-12345/plan.md
+SUMMARY: Added auth middleware with JWT refresh token support.
+OPEN_QUESTIONS: none
+EOF
+bun ~/.agent/msg.js reply <parent-message-id> planner --body "$(cat /tmp/msg-body.txt)"
+```
+
+`reply` automatically inherits the parent's scope, session, and thread. Always use
+`reply` when responding to a `task_request` — never use `send` for responses.
+
+### inbox check (start of every session)
+
+```bash
+# Consumer-aware (preferred when AGENT_CONSUMER_ID is set):
+bun ~/.agent/msg.js inbox planner --consumer "$AGENT_CONSUMER_ID"
+
+# Fallback (no consumer ID):
+bun ~/.agent/msg.js inbox planner
+```
+
+### read thread context without mutating state
+
+```bash
+bun ~/.agent/msg.js thread <thread-id>
+```
+
+Use `thread` (not `read`) when you just need context. `read` marks the message read
+and changes consumer state.
+
+### address a message when work is complete
+
+```bash
+bun ~/.agent/msg.js address <message-id> --note "Plan written to ~/.agent/artifacts/sc-12345/plan.md"
+```
+
+---
+
 ## Commands
 
 ```bash
