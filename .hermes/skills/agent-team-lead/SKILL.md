@@ -152,6 +152,20 @@ EOF
 
 ---
 
+### Phase: plan_triage
+
+Before invoking the planner, check for an existing plan:
+
+1. Check the user prompt, story description, and Shortcut comments for plan-like content.
+2. If found, write it to `~/.agent/artifacts/<story-id>/plan-draft.md`.
+3. Assess completeness per `~/.agent/plan-completeness-routing.md`:
+   - **Rich** (all three criteria met: phases, agent instructions, pseudocode) → copy to `plan.md`, skip to `plan_review`.
+   - **Partial** (some criteria met) → proceed to `planning` with fill-in mode (Contract 1A).
+   - **Thin or none** → proceed to `planning` with full mode (Contract 1).
+4. Update state: `plan_triage_result = "rich" | "partial" | "thin"`.
+
+---
+
 ### Phase: planning
 
 ```bash
@@ -288,6 +302,13 @@ EOF
 ### Phase: implementation
 
 ```bash
+# 0. Ensure main is up to date and create feature branch
+git fetch origin main
+git checkout -b feature/<story-id> origin/main  # if not already on feature branch
+
+# Record round start commit
+ROUND_START_COMMIT=$(git rev-parse HEAD)
+
 CONSUMER_ID="coder_pipeline_<story-id>"
 bun ~/.agent/msg.js register "$CONSUMER_ID" coder
 bun ~/.agent/msg.js enroll "$SESSION_ID" "$CONSUMER_ID"
@@ -302,11 +323,12 @@ PLAN_ARTIFACT: <plan-artifact-path>
 REPOS: <repos>
 CONSUMER_ID: <consumer-id>
 
-Implement faithfully. Reply with:
+Implement faithfully. Commit your changes before replying. Reply with:
 CHANGES_MADE: <file list with per-file summary>
 TESTS: <tests added/updated and pass/fail status>
 DEVIATIONS: <deviations from plan or "none">
 VALIDATION: <concrete verification steps>
+COMMIT_SHA: <commit hash after committing>
 EOF
 
 MSG_OUT=$(bun ~/.agent/msg.js send team-lead coder task_request \
@@ -315,14 +337,24 @@ MSG_OUT=$(bun ~/.agent/msg.js send team-lead coder task_request \
 IMPL_THREAD_ID=$(echo "$MSG_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['thread_id'])")
 ```
 
-Spawn coder, read reply, validate `CHANGES_MADE`, `TESTS`, `DEVIATIONS`, `VALIDATION` present.
-Update state, advance to `code_review`.
+Spawn coder, read reply, validate `CHANGES_MADE`, `TESTS`, `DEVIATIONS`, `VALIDATION`, `COMMIT_SHA` present.
+
+After coder reply:
+- Extract `COMMIT_SHA` from reply.
+- Store commit range `{ start: ROUND_START_COMMIT, end: COMMIT_SHA }` in state `commit_ranges` array.
+- Update `round_start_commit` to `COMMIT_SHA`.
+- Update state, advance to `code_review`.
+
+See `~/.agent/incremental-review-commit-ranges.md` for full details.
 
 ---
 
 ### Phase: code_review
 
 Same pattern as plan_review but with `MODE: code_review`.
+
+Round 1 (first cycle): omit COMMIT_RANGE — reviewer does a full review.
+Round 2+ (subsequent cycles after coder fixes): include COMMIT_RANGE and PRIOR_FEEDBACK.
 
 ```bash
 cat > /tmp/msg-body.txt << 'EOF'
@@ -333,8 +365,11 @@ PLAN_ARTIFACT: <latest-plan-artifact>
 REPOS: <repos>
 ARTIFACT_DIR: ~/.agent/artifacts/<story-id>/
 CONSUMER_ID: <consumer-id>
+COMMIT_RANGE: <start>..<end>  # round 2+ only; omit for round 1
+PRIOR_FEEDBACK: ~/.agent/artifacts/<story-id>/code-review.md  # round 2+ only
 
 Perform four passes: Functionality, Code Issues, Architecture, Style.
+If COMMIT_RANGE is provided, scope review to that diff and verify prior findings are addressed.
 Write review to ARTIFACT_DIR/code-review.md and reply with:
 ARTIFACT: ~/.agent/artifacts/<story-id>/code-review.md
 APPROVED: true | false

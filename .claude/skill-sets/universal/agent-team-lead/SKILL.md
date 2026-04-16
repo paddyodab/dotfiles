@@ -93,6 +93,367 @@ Run exactly one story at a time.
    - Halt and report blocking reason, current phase, cycle count, and required human action.
 </pipeline_phases>
 
+<execution_procedure>
+## How to Actually Run the Pipeline
+
+This is the runbook. Follow it step by step. Every action updates the state file.
+Do not improvise the orchestration — if you find yourself hand-stitching steps, something is wrong.
+
+### Invocation
+
+The user gives you a story. Extract:
+- `STORY_ID` — e.g. `sc-12345` or a GitHub issue number
+- `STORY_TITLE` — one-line summary
+- `STORY_DESCRIPTION` — full requirements
+- `REPOS` — comma-separated absolute paths to affected repos
+- `ACCEPTANCE_CRITERIA` — what done looks like (may be in description)
+
+If any of these are missing, ask once before starting.
+
+---
+
+### Phase: init
+
+```bash
+# 1. Create artifact dir
+mkdir -p ~/.agent/artifacts/<story-id>
+
+# 2. Start bus session, capture session_id
+SESSION_JSON=$(bun ~/.agent/msg.js session-start team-lead --json)
+SESSION_ID=$(echo "$SESSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['session_id'])")
+
+# 3. Write initial state file
+cat > ~/.agent/pipeline-state-<story-id>.json << EOF
+{
+  "story_id": "<story-id>",
+  "story_title": "<title>",
+  "story_description": "<description>",
+  "session_id": "$SESSION_ID",
+  "repos": ["<repo-path>"],
+  "phase": "planning",
+  "plan_triage_result": null,
+  "round_start_commit": null,
+  "commit_ranges": [],
+  "cycle_count": { "planning": 0, "implementation": 0, "pr_review": 0 },
+  "max_cycles": { "planning": 3, "implementation": 3, "pr_review": 2 },
+  "thread_ids": {
+    "planning": null,
+    "plan_review": null,
+    "implementation": null,
+    "code_review": null,
+    "pr_classification": null
+  },
+  "approvals": { "plan": false, "code": false },
+  "pr": { "url": null, "branch": null },
+  "last_action": "init",
+  "started_at": "<iso-timestamp>",
+  "updated_at": "<iso-timestamp>"
+}
+EOF
+```
+
+---
+
+### Phase: plan_triage
+
+Before invoking the planner, check for an existing plan:
+
+1. Check the user prompt, story description, and Shortcut comments for plan-like content.
+2. If found, write it to `~/.agent/artifacts/<story-id>/plan-draft.md`.
+3. Assess completeness per `~/.agent/plan-completeness-routing.md`:
+   - **Rich** (all three criteria met: phases, agent instructions, pseudocode) → copy to `plan.md`, skip to `plan_review`.
+   - **Partial** (some criteria met) → proceed to `planning` with fill-in mode (Contract 1A).
+   - **Thin or none** → proceed to `planning` with full mode (Contract 1).
+4. Update state: `plan_triage_result = "rich" | "partial" | "thin"`.
+
+---
+
+### Phase: planning
+
+```bash
+# 1. Register + enroll planner consumer
+CONSUMER_ID="planner_pipeline_<story-id>"
+bun ~/.agent/msg.js register "$CONSUMER_ID" planner
+bun ~/.agent/msg.js enroll "$SESSION_ID" "$CONSUMER_ID"
+
+# 2. Write message body to temp file (never inline heredoc into --body)
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Create implementation plan
+STORY_ID: <story-id>
+STORY_TITLE: <title>
+STORY_DESCRIPTION: <description>
+ACCEPTANCE_CRITERIA: <criteria>
+REPOS: <comma-separated repo paths>
+ARTIFACT_DIR: ~/.agent/artifacts/<story-id>/
+CONSUMER_ID: <consumer-id>
+
+Write your plan to ARTIFACT_DIR/plan.md and reply on this thread with:
+ARTIFACT: ~/.agent/artifacts/<story-id>/plan.md
+SUMMARY: <2-3 sentence approach>
+OPEN_QUESTIONS: <questions or "none">
+EOF
+
+# 3. Send message, capture message ID
+MSG_OUT=$(bun ~/.agent/msg.js send team-lead planner task_request \
+  --body "$(cat /tmp/msg-body.txt)" \
+  --scope session --session "$SESSION_ID" --json)
+PLANNING_MSG_ID=$(echo "$MSG_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PLANNING_THREAD_ID=$(echo "$MSG_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['thread_id'])")
+
+# 4. Update state
+# (update thread_ids.planning = PLANNING_THREAD_ID, last_action = "sent planning request")
+```
+
+Then spawn planner via Task tool:
+```
+prompt: "You are the planner agent. Load the agent-planner and agent-message-bus skills,
+then check your inbox and process the blocking message from team-lead."
+```
+
+After Task returns:
+```bash
+# Read the reply from the planning thread
+bun ~/.agent/msg.js thread "$PLANNING_THREAD_ID"
+```
+
+Validate reply contains: `ARTIFACT`, `SUMMARY`, `OPEN_QUESTIONS`.
+If missing → send correction message, re-spawn once. If still missing → escalate.
+
+If valid → read artifact exists at path, update state:
+- `thread_ids.planning = PLANNING_THREAD_ID`
+- `cycle_count.planning += 1`
+- `last_action = "planning complete"`
+- Advance to `plan_review`.
+
+---
+
+### Phase: plan_review
+
+```bash
+CONSUMER_ID="reviewer_pipeline_<story-id>"
+bun ~/.agent/msg.js register "$CONSUMER_ID" reviewer
+bun ~/.agent/msg.js enroll "$SESSION_ID" "$CONSUMER_ID"
+
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Review implementation plan
+MODE: plan_review
+STORY_ID: <story-id>
+PLAN_ARTIFACT: ~/.agent/artifacts/<story-id>/plan.md
+REPOS: <repos>
+ARTIFACT_DIR: ~/.agent/artifacts/<story-id>/
+CONSUMER_ID: <consumer-id>
+
+Write your review to ARTIFACT_DIR/plan-review.md and reply with:
+ARTIFACT: ~/.agent/artifacts/<story-id>/plan-review.md
+APPROVED: true | false
+BLOCKING_COUNT: <number>
+SUMMARY: <1-2 sentence verdict>
+EOF
+
+MSG_OUT=$(bun ~/.agent/msg.js send team-lead reviewer task_request \
+  --body "$(cat /tmp/msg-body.txt)" \
+  --scope session --session "$SESSION_ID" --json)
+PLAN_REVIEW_THREAD_ID=$(echo "$MSG_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['thread_id'])")
+```
+
+Spawn reviewer via Task tool, then after Task returns:
+```bash
+bun ~/.agent/msg.js thread "$PLAN_REVIEW_THREAD_ID"
+```
+
+Extract `APPROVED` field. **Never infer approval from tone.** Must be literal `APPROVED: true`.
+
+If `APPROVED: true`:
+- Update `approvals.plan = true`, advance to `implementation`.
+
+If `APPROVED: false`:
+- Check `cycle_count.planning` against `max_cycles.planning` (3).
+- If at limit → escalate with phase, cycle count, and blocking findings.
+- If under limit → run **plan revision loop**:
+
+```bash
+# Plan revision
+CONSUMER_ID="planner_pipeline_<story-id>"
+bun ~/.agent/msg.js register "$CONSUMER_ID" planner
+bun ~/.agent/msg.js enroll "$SESSION_ID" "$CONSUMER_ID"
+
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Revise implementation plan
+STORY_ID: <story-id>
+PRIOR_PLAN_ARTIFACT: ~/.agent/artifacts/<story-id>/plan.md
+REVIEW_ARTIFACT: ~/.agent/artifacts/<story-id>/plan-review.md
+REPOS: <repos>
+ARTIFACT_DIR: ~/.agent/artifacts/<story-id>/
+CONSUMER_ID: <consumer-id>
+
+Address ALL blocking findings. Write revised plan to ARTIFACT_DIR/plan-v<N>.md.
+Include a FINDINGS ADDRESSED section at top.
+Reply with: ARTIFACT, SUMMARY, OPEN_QUESTIONS
+EOF
+
+# Send, spawn planner, read reply, validate, increment cycle_count.planning
+# Repeat plan_review from the top with the new artifact
+```
+
+---
+
+### Phase: implementation
+
+```bash
+# 0. Ensure main is up to date and create feature branch
+git fetch origin main
+git checkout -b feature/<story-id> origin/main  # if not already on feature branch
+
+# Record round start commit
+ROUND_START_COMMIT=$(git rev-parse HEAD)
+
+CONSUMER_ID="coder_pipeline_<story-id>"
+bun ~/.agent/msg.js register "$CONSUMER_ID" coder
+bun ~/.agent/msg.js enroll "$SESSION_ID" "$CONSUMER_ID"
+
+# Use latest approved plan artifact (plan.md or plan-v<N>.md)
+PLAN_ARTIFACT=$(ls -t ~/.agent/artifacts/<story-id>/plan*.md | head -1)
+
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Implement approved plan
+STORY_ID: <story-id>
+PLAN_ARTIFACT: <plan-artifact-path>
+REPOS: <repos>
+CONSUMER_ID: <consumer-id>
+
+Implement faithfully. Commit your changes before replying. Reply with:
+CHANGES_MADE: <file list with per-file summary>
+TESTS: <tests added/updated and pass/fail status>
+DEVIATIONS: <deviations from plan or "none">
+VALIDATION: <concrete verification steps>
+COMMIT_SHA: <commit hash after committing>
+EOF
+
+MSG_OUT=$(bun ~/.agent/msg.js send team-lead coder task_request \
+  --body "$(cat /tmp/msg-body.txt)" \
+  --scope session --session "$SESSION_ID" --json)
+IMPL_THREAD_ID=$(echo "$MSG_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['thread_id'])")
+```
+
+Spawn coder via Task tool, read reply, validate `CHANGES_MADE`, `TESTS`, `DEVIATIONS`, `VALIDATION`, `COMMIT_SHA` present.
+
+After coder reply:
+- Extract `COMMIT_SHA` from reply.
+- Store commit range `{ start: ROUND_START_COMMIT, end: COMMIT_SHA }` in state `commit_ranges` array.
+- Update `round_start_commit` to `COMMIT_SHA`.
+- Update state, advance to `code_review`.
+
+See `~/.agent/incremental-review-commit-ranges.md` for full details.
+
+---
+
+### Phase: code_review
+
+Same pattern as plan_review but with `MODE: code_review`.
+
+Round 1 (first cycle): omit COMMIT_RANGE — reviewer does a full review.
+Round 2+ (subsequent cycles after coder fixes): include COMMIT_RANGE and PRIOR_FEEDBACK.
+
+```bash
+cat > /tmp/msg-body.txt << 'EOF'
+TASK: Review code changes
+MODE: code_review
+STORY_ID: <story-id>
+PLAN_ARTIFACT: <latest-plan-artifact>
+REPOS: <repos>
+ARTIFACT_DIR: ~/.agent/artifacts/<story-id>/
+CONSUMER_ID: <consumer-id>
+COMMIT_RANGE: <start>..<end>  # round 2+ only; omit for round 1
+PRIOR_FEEDBACK: ~/.agent/artifacts/<story-id>/code-review.md  # round 2+ only
+
+Perform four passes: Functionality, Code Issues, Architecture, Style.
+If COMMIT_RANGE is provided, scope review to that diff and verify prior findings are addressed.
+Write review to ARTIFACT_DIR/code-review.md and reply with:
+ARTIFACT: ~/.agent/artifacts/<story-id>/code-review.md
+APPROVED: true | false
+BLOCKING_COUNT: <number>
+SUMMARY: <1-2 sentence verdict>
+EOF
+```
+
+If `APPROVED: false`:
+- Check `cycle_count.implementation` against max (3).
+- If at limit → escalate.
+- If under → send fix request to coder (Contract 6), re-spawn, increment counter, re-review.
+
+If `APPROVED: true`:
+- Update `approvals.code = true`, advance to `pr`.
+
+---
+
+### Phase: pr
+
+Delegate to Secretary via Task tool:
+
+```text
+task: PR
+repo_path: <absolute repo path>
+base_branch: main
+title_hint: <story title>
+story_id: <story-id>
+body_hint: Implementation complete per plan. See ~/.agent/artifacts/<story-id>/ for plan and review artifacts.
+```
+
+After secretary returns: capture PR URL, update state `pr.url`, advance to `pr_review`.
+
+---
+
+### Phase: pr_review
+
+```bash
+# Fetch PR comments
+gh pr view <pr-number> --repo <owner/repo> --json comments,reviews > /tmp/pr-comments.json
+```
+
+Send to reviewer with `MODE: pr_classification`. Route MUST_FIX and SHOULD_FIX to coder.
+After coder fixes, reply inline to each addressed comment:
+```bash
+gh api -X POST repos/<owner>/<repo>/pulls/comments/<comment-id>/replies \
+  -f body='Fixed in <commit-sha>: <what changed>'
+```
+
+Repeat until counts are zero or `max_cycles.pr_review` (2) is reached.
+
+---
+
+### Phase: done
+
+```bash
+bun ~/.agent/msg.js session-close "$SESSION_ID" --status complete
+# Rename state file
+mv ~/.agent/pipeline-state-<story-id>.json ~/.agent/pipeline-state-<story-id>.done.json
+```
+
+Report to user:
+- Story ID and title
+- PR URL
+- What changed (from coder's CHANGES_MADE)
+- How to validate (from coder's VALIDATION)
+- Any open questions or deferred findings
+
+---
+
+### Phase: escalated
+
+```bash
+bun ~/.agent/msg.js session-close "$SESSION_ID" --status failed
+```
+
+Report to user:
+- Story ID, current phase, cycle count
+- Blocking reason (exact findings from last review)
+- What human action is needed
+- Artifact paths for context
+
+Do not guess at a fix. Stop and wait.
+
+</execution_procedure>
+
 <invocation_protocol>
 ## Thin Prompt Pattern (Mandatory)
 
