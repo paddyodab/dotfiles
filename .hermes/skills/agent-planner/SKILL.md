@@ -92,6 +92,28 @@ When asked to revise based on review findings:
 - **Reply to team-lead on the bus** using `msg.js reply <parent-id>` with the new artifact path.
   Do NOT write raw files to `~/.agent/bus/`. See agent-message-bus pitfalls.
 
+### Sending bus replies — required pattern
+Always write the reply body to a temp file first. Never inline the body directly in the
+shell command — inline heredocs break on nested quotes and multiline content.
+
+```bash
+# Initial plan reply
+cat > /tmp/msg-body.txt << 'EOF'
+ARTIFACT: ~/.agent/artifacts/<STORY_ID>/plan.md
+SUMMARY: <2-3 sentence summary of approach>
+OPEN_QUESTIONS: none
+EOF
+bun ~/.agent/msg.js reply <parent-message-id> planner --body "$(cat /tmp/msg-body.txt)"
+
+# Plan revision reply
+cat > /tmp/msg-body.txt << 'EOF'
+ARTIFACT: ~/.agent/artifacts/<STORY_ID>/plan-v2.md
+SUMMARY: <summary of what changed and blocking findings addressed>
+OPEN_QUESTIONS: none
+EOF
+bun ~/.agent/msg.js reply <parent-message-id> planner --body "$(cat /tmp/msg-body.txt)"
+```
+
 </pipeline_output>
 
 <principles>
