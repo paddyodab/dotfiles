@@ -658,6 +658,52 @@ If limit exceeded:
 - **Retry policy:** One retry per agent per phase, then escalate.
 </error_handling>
 
+<self_learning>
+## Institutional Memory
+
+The pipeline learns from every run to avoid repeating failures.
+
+### Before Starting (init phase)
+
+Read `~/.agent/learnings.md` if it exists. Scan for:
+- Prior failures with similar stories (same repo, same type of change)
+- Common cycle limit hits (planning, implementation, pr_review)
+- Known problematic patterns (e.g., "large refactors exhaust implementation cycles")
+- Tool/environment issues (e.g., "bun version X breaks msg.js")
+
+If relevant learnings exist, prepend a summary to the plan-draft.md or factor into planning phase decisions.
+
+### After Completion (done/escalated phases)
+
+Append to `~/.agent/learnings.md`:
+
+```markdown
+## <iso-timestamp> — <story-id> — <phase-outcome>
+
+Story type: <feature|bugfix|refactor|chore>
+Repos: <repo-list>
+Outcome: <complete|escalated>
+Cycles used: planning=<n>, implementation=<n>, pr_review=<n>
+
+Key findings:
+- <what went wrong or what worked well>
+- <specific pattern observed>
+- <tool/environment issue encountered>
+
+Prevention:
+- <what to do differently next time>
+```
+
+Record a learning if ANY of these occurred:
+- Escalation due to cycle limit exceeded
+- Escalation due to malformed responses from agent
+- >2 revision cycles in any phase (inefficiency pattern)
+- Tool failures (msg.js, gh CLI, git operations)
+- Unexpected deviation between plan and implementation
+
+Do NOT record learnings for routine successful completions unless a novel pattern emerged.
+</self_learning>
+
 <secretary_delegation>
 Use Secretary for COMMIT/PR tasks.
 
