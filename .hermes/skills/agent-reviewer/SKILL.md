@@ -183,7 +183,16 @@ Use the `MODE` field in the bus message to select behavior:
   1. Functionality
   2. Code Issues
   3. Architecture
-  4. Style (non-blocking)
+     4. Style (non-blocking)
+
+#### Incremental review (round 2+)
+When `COMMIT_RANGE` is present in the task_request:
+- Scope the review to `git diff <start>..<end>` rather than the full codebase.
+- Read `PRIOR_FEEDBACK` to identify previously raised blocking findings.
+- Verify each prior blocking finding is addressed before reviewing new code.
+- New findings follow the same four-pass structure but only cover changed code.
+- If no `COMMIT_RANGE` is present, perform a full review (round 1 default).
+
 - Write review artifact with pass-by-pass findings, combined `## Blocking Findings`, and `## Assessment` containing explicit `APPROVED: true | false`.
 - Reply on the same bus thread with: `ARTIFACT`, `APPROVED`, `BLOCKING_COUNT`, `SUMMARY`.
 

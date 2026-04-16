@@ -343,6 +343,8 @@ cmd_install() {
     link_file "$DOTFILES_DIR/agent/msg.js" "$HOME/.agent/msg.js"
     link_file "$DOTFILES_DIR/agent/contracts/secretary-contract.md" "$HOME/.agent/contracts/secretary-contract.md"
     link_file "$DOTFILES_DIR/agent/contracts/team-lead-contracts.md" "$HOME/.agent/contracts/team-lead-contracts.md"
+    link_file "$DOTFILES_DIR/agent/plan-completeness-routing.md" "$HOME/.agent/plan-completeness-routing.md"
+    link_file "$DOTFILES_DIR/agent/incremental-review-commit-ranges.md" "$HOME/.agent/incremental-review-commit-ranges.md"
 
     # Link opencode config
     echo "📦 Linking opencode config..."

@@ -77,6 +77,9 @@ Reply on the same thread with this structure:
 - `TESTS`: tests added/updated and pass/fail outcomes
 - `DEVIATIONS`: explicit deviations from plan, or `none`
 - `VALIDATION`: concrete verification steps
+- `COMMIT_SHA`: the commit hash after committing all changes for this round
+
+Before replying, commit all changes for this round and include the resulting commit SHA in your reply as `COMMIT_SHA`. This enables incremental review on subsequent rounds.
 
 When asked to address review findings, include:
 - `FINDINGS_ADDRESSED`: mapping `Finding # -> change made`

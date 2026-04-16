@@ -28,32 +28,53 @@ Run exactly one story at a time.
    - Initialize/read state file: `~/.agent/pipeline-state-<story-id>.json`
    - Start a bus session: `msg.js session-start team-lead` and store `session_id` in state.
 
-2. **planning**
+2. **plan_triage**
+   - Check for an existing plan: (a) inline in the user prompt, (b) in the Shortcut story description or comments.
+   - If found, write it to `ARTIFACT_DIR/plan-draft.md`.
+   - Assess completeness per `~/.agent/plan-completeness-routing.md`.
+   - Route:
+     - **Rich** → copy `plan-draft.md` to `plan.md`, skip to `plan_review`.
+     - **Partial** → proceed to `planning` with fill-in mode (Contract 1A).
+     - **Thin or no plan** → proceed to `planning` with full mode (Contract 1).
+   - Record in state file: `plan_triage_result: "rich" | "partial" | "thin"`.
+
+3. **planning**
    - Pre-register + enroll a planner consumer for the active session.
    - Post session-scoped `task_request` to Planner (Contract 1).
    - Spawn Planner via delegate_task.
 
-3. **plan_review**
+4. **plan_review**
    - Pre-register + enroll a reviewer consumer for the active session.
    - Post session-scoped `task_request` to Reviewer with `MODE: plan_review` (Contract 2).
    - Spawn Reviewer and evaluate explicit `APPROVED` boolean.
    - If not approved, pre-register + enroll planner consumer and run plan revision loop with Planner (Contract 3).
 
-4. **implementation**
+5. **implementation**
+   - Ensure local main is up to date (`git fetch origin main`).
+   - Create feature branch from main if not already on one.
+   - Record current HEAD as `round_start_commit` in state file.
    - Pre-register + enroll a coder consumer for the active session.
    - Post session-scoped `task_request` to Coder with approved plan artifact (Contract 4).
    - Spawn Coder.
+   - Read `COMMIT_SHA` from coder's reply.
+   - Store commit range `{ start: round_start_commit, end: COMMIT_SHA }` in state `commit_ranges` array.
+   - Update `round_start_commit` to `COMMIT_SHA` (so next round's range starts where this one ended).
+   - See ~/.agent/incremental-review-commit-ranges.md.
 
-5. **code_review**
+6. **code_review**
    - Pre-register + enroll a reviewer consumer for the active session.
+   - Round 1 (first code_review cycle): dispatch as Contract 5 without COMMIT_RANGE (full review).
+   - Round 2+ (subsequent cycles): include COMMIT_RANGE and PRIOR_FEEDBACK in Contract 5 task_request.
+     - COMMIT_RANGE: latest entry from state `commit_ranges` array.
+     - PRIOR_FEEDBACK: path to the most recent code-review artifact.
    - Post session-scoped `task_request` to Reviewer with `MODE: code_review` (Contract 5).
    - Spawn Reviewer and evaluate explicit `APPROVED` boolean.
    - If not approved, pre-register + enroll coder consumer and request fixes from Coder (Contract 6).
 
-6. **pr**
+7. **pr**
    - Delegate branch/commit/push/PR work to Secretary.
 
-7. **pr_review**
+8. **pr_review**
     - Fetch PR comments via gh CLI.
     - Pre-register + enroll a reviewer consumer for the active session.
     - Send session-scoped comments to Reviewer with `MODE: pr_classification` (Contract 7).
@@ -61,11 +82,11 @@ Run exactly one story at a time.
     - After fixes are merged, post inline replies on the PR for each addressed comment.
     - Repeat classification/fix/reply loop up to max cycles.
 
-8. **done**
+9. **done**
    - Close bus session: `msg.js session-close <session_id> --status complete`.
    - Report final summary and validation steps to user.
 
-9. **escalated**
+10. **escalated**
    - Close bus session: `msg.js session-close <session_id> --status failed`.
    - Halt and report blocking reason, current phase, cycle count, and required human action.
 </pipeline_phases>
@@ -108,6 +129,9 @@ cat > ~/.agent/pipeline-state-<story-id>.json << EOF
   "session_id": "$SESSION_ID",
   "repos": ["<repo-path>"],
   "phase": "planning",
+  "plan_triage_result": null,
+  "round_start_commit": null,
+  "commit_ranges": [],
   "cycle_count": { "planning": 0, "implementation": 0, "pr_review": 0 },
   "max_cycles": { "planning": 3, "implementation": 3, "pr_review": 2 },
   "thread_ids": {
@@ -453,6 +477,7 @@ Use the canonical contract definitions in:
 
 Contracts to execute:
 1. Team Lead → Planner (Planning)
+1A. Team Lead → Planner (Fill-in Planning)
 2. Team Lead → Reviewer (Plan Review)
 3. Team Lead → Planner (Plan Revision)
 4. Team Lead → Coder (Implementation)
@@ -518,6 +543,9 @@ Schema:
   "session_id": null,
   "repos": ["~/repos/your-project"],
   "phase": "planning",
+  "plan_triage_result": null,
+  "round_start_commit": null,
+  "commit_ranges": [],
   "cycle_count": { "planning": 0, "implementation": 0, "pr_review": 0 },
   "max_cycles": { "planning": 3, "implementation": 3, "pr_review": 2 },
   "thread_ids": {
