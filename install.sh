@@ -273,6 +273,18 @@ install_hermes_plugins() {
     if [ "$found" -eq 0 ]; then
         echo "   (no plugins found in $src_dir)"
     fi
+
+    # Clean up backup dirs that shadow real plugins (backup sorts after
+    # plugin name, wins hermes dedup, loads stale code)
+    for backup in "$dest_dir"/*.backup.*; do
+        [ -d "$backup" ] || continue
+        local backup_base
+        backup_base="$(basename "$backup" | sed 's/\.backup\..*//')"
+        if [ -L "$dest_dir/$backup_base" ]; then
+            echo "   - Removing shadow backup: $(basename "$backup")"
+            rm -rf "$backup"
+        fi
+    done
 }
 
 # ── Hermes config patcher ───────────────────────────────────────────────────
