@@ -2,7 +2,24 @@
 
 Portable eval framework for testing token compression across models and machines.
 
-## Quick Start
+## Prerequisites
+
+```bash
+# Python 3.9+
+python3 --version
+
+# OpenAI SDK (used for all OpenAI-compatible providers)
+pip install openai
+
+# API key in env
+# Option A: export directly
+export NOUS_API_KEY=sk-...
+
+# Option B: source from hermes .env
+source ~/.hermes/.env
+```
+
+Supported providers all use OpenAI-compatible endpoints. `openai` SDK required regardless of provider.
 
 ```bash
 # Test with Anthropic
@@ -42,6 +59,8 @@ python eval.py --load work-results.json --json
 | openai | `OPENAI_API_KEY` | gpt-4o |
 | openrouter | `OPENROUTER_API_KEY` | anthropic/claude-sonnet-4 |
 | deepseek | `DEEPSEEK_API_KEY` | deepseek-chat |
+| nous | `NOUS_API_KEY` | xiaomi/mimo-v2-pro |
+| opencode-zen | `OPENCODE_ZEN_API_KEY` | (any model) |
 
 ## Cross-Machine Workflow
 
