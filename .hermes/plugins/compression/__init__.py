@@ -45,6 +45,13 @@ def _tok(n_chars: int) -> int:
     """Rough char->token estimate."""
     return max(1, n_chars // _CHARS_PER_TOKEN)
 
+def _preview(text: str, words: int = 5) -> str:
+    """First N words of text, truncated."""
+    if not text:
+        return ""
+    parts = text.split()[:words]
+    return " ".join(parts) + ("..." if len(text.split()) > words else "")
+
 # ─────────────────────────────────────────────────────
 # Compression Rules (agent-agnostic, no dependencies)
 # ─────────────────────────────────────────────────────
@@ -165,10 +172,12 @@ def register(ctx):
             ratio = _est_ratio.get(caveman_level, 0.50)
             est_saved = int(resp_tokens * ratio)
             est_without = resp_tokens + est_saved
+            _resp_preview = _response_stats.get("preview", "")
             _log_stats(
-                f"Output compression ({caveman_level}): "
-                f"~{resp_tokens} tokens "
-                f"(est. ~{est_without} without, ~{est_saved} saved, ~{int(ratio*100)}%)"
+                f"Output ({caveman_level}): "
+                f"~{resp_tokens} tok "
+                f"(~{est_saved} saved, {int(ratio*100)}%) "
+                f'"{_resp_preview}"'
             )
 
         parts = []
@@ -202,10 +211,10 @@ def register(ctx):
                         new_hash = _message_hash(compressed)
                         _compressed_hashes.add(new_hash)
                         _log_stats(
-                            f"Input compression ({savings:.0f}%): "
-                            f"~{_tok(len(compressed))} tokens "
-                            f"(est. ~{_tok(len(content))} without, "
-                            f"~{_tok(len(content)) - _tok(len(compressed))} saved)"
+                            f"Input ({savings:.0f}%): "
+                            f"~{_tok(len(compressed))} tok "
+                            f"(~{_tok(len(content)) - _tok(len(compressed))} saved) "
+                            f'"{_preview(content)}"'
                         )
 
                 # Mark original as processed
@@ -224,8 +233,8 @@ def register(ctx):
         """Track response length for output compression stats."""
         if assistant_response:
             _response_stats["chars"] = len(assistant_response)
+            _response_stats["preview"] = _preview(assistant_response)
 
     ctx.register_hook("pre_llm_call", on_pre_llm_call)
     ctx.register_hook("post_llm_call", on_post_llm_call)
-    _log_stats(f"─── session started ─── (input={input_enabled}, output={caveman_level or 'off'})")
     logger.info("Compression plugin registered: pre_llm_call hook")
