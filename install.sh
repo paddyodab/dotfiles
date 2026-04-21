@@ -253,6 +253,28 @@ install_claude_agents() {
     fi
 }
 
+# ── Hermes plugins installer ──────────────────────────────────────────────────
+# Symlinks plugin directories from dotfiles .hermes/plugins/ into
+# ~/.hermes/plugins/. Hermes auto-discovers plugins from this directory.
+install_hermes_plugins() {
+    local src_dir="$DOTFILES_DIR/.hermes/plugins"
+    local dest_dir="$HOME/.hermes/plugins"
+    mkdir -p "$dest_dir"
+
+    local found=0
+    for plugin_dir in "$src_dir"/*/; do
+        [ -d "$plugin_dir" ] || continue
+        local plugin_name
+        plugin_name="$(basename "$plugin_dir")"
+        link_file "$plugin_dir" "$dest_dir/$plugin_name"
+        found=1
+    done
+
+    if [ "$found" -eq 0 ]; then
+        echo "   (no plugins found in $src_dir)"
+    fi
+}
+
 # ── Hermes agent installer ────────────────────────────────────────────────────
 # Symlinks agent-* skill directories from dotfiles .hermes/skills/ into
 # ~/.hermes/skills/. Hermes loads skills by name via skill_view(), so symlinks
@@ -371,6 +393,17 @@ cmd_install() {
     echo "📦 Linking universal Claude Code skills..."
     link_profile_skills "universal" "$HOME/.claude/skills"
 
+    # Link Hermes plugins
+    echo "📦 Installing Hermes plugins..."
+    install_hermes_plugins
+
+    # Link Hermes compression evals
+    local evals_src="$DOTFILES_DIR/.hermes/compression-evals"
+    local evals_dest="$HOME/.hermes/compression-evals"
+    if [ -d "$evals_src" ]; then
+        link_file "$evals_src" "$evals_dest"
+    fi
+
     # Link Hermes agent skills
     echo "📦 Installing Hermes agent skills..."
     install_hermes_agents
@@ -397,8 +430,12 @@ cmd_install() {
     echo "    Skills: ~/.claude/skills/"
     echo "    Activate a profile: ./install.sh activate <profile> [project-dir]"
     echo ""
-    echo "  Hermes:"
-    echo "    Agent skills: ~/.hermes/skills/ (symlinked)"
+  echo "  Hermes:"
+  echo "    Agent skills: ~/.hermes/skills/ (symlinked)"
+  echo "    Plugins: ~/.hermes/plugins/ (symlinked)"
+  echo "    Compression: /output-compression full (or set compression.output_level in config.yaml)"
+  echo "    Evals: ~/.hermes/compression-evals/eval.py (symlinked)"
+  echo "    Usage: ANTHROPIC_API_KEY=... python eval.py --model claude-sonnet-4"
     echo "    Agents: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
     echo "            agent-secretary, agent-puddleglum, agent-doc-agent, agent-message-bus"
     echo "    Load via: skill_view(name='agent-team-lead')"
