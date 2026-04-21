@@ -275,6 +275,80 @@ install_hermes_plugins() {
     fi
 }
 
+# ── Hermes config patcher ───────────────────────────────────────────────────
+# Ensures config.yaml has required sections for dotfiles plugins.
+# Uses yq if available, otherwise falls back to Python yaml.
+# Safe to run multiple times (idempotent).
+install_hermes_config() {
+    local config="$HOME/.hermes/config.yaml"
+    if [ ! -f "$config" ]; then
+        echo "   ⚠ No config.yaml found at $config — run 'hermes setup' first"
+        return 1
+    fi
+
+    # Use Python (always available in hermes venv) to merge config keys
+    python3 - "$config" <<'PYEOF'
+import sys, os
+
+config_path = sys.argv[1]
+
+try:
+    import yaml
+except ImportError:
+    # Fallback: naive key check + append
+    with open(config_path) as f:
+        content = f.read()
+    needs_plugins = "plugins:" not in content
+    needs_tc = "token_compression:" not in content
+    if needs_plugins or needs_tc:
+        with open(config_path, "a") as f:
+            f.write("\n# ── Dotfiles-managed config ──\n")
+            if needs_plugins:
+                f.write("plugins:\n  enabled:\n  - compression\n")
+            if needs_tc:
+                f.write("token_compression:\n  input_enabled: true\n  output_level: full\n")
+        print("   ✓ Appended missing config sections")
+    else:
+        print("   ✓ Config already has plugins + token_compression")
+    sys.exit(0)
+
+with open(config_path) as f:
+    cfg = yaml.safe_load(f) or {}
+
+changed = False
+
+# Ensure plugins.enabled includes "compression"
+if "plugins" not in cfg:
+    cfg["plugins"] = {"enabled": ["compression"]}
+    changed = True
+    print("   + Added plugins.enabled: [compression]")
+elif "enabled" not in cfg["plugins"]:
+    cfg["plugins"]["enabled"] = ["compression"]
+    changed = True
+    print("   + Added compression to plugins.enabled")
+elif "compression" not in cfg["plugins"]["enabled"]:
+    cfg["plugins"]["enabled"].append("compression")
+    changed = True
+    print("   + Added compression to plugins.enabled")
+
+# Ensure token_compression section exists
+if "token_compression" not in cfg:
+    cfg["token_compression"] = {
+        "input_enabled": True,
+        "output_level": "full",
+    }
+    changed = True
+    print("   + Added token_compression section")
+
+if changed:
+    with open(config_path, "w") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+    print("   ✓ Config updated")
+else:
+    print("   ✓ Config already complete")
+PYEOF
+}
+
 # ── Hermes agent installer ────────────────────────────────────────────────────
 # Symlinks agent-* skill directories from dotfiles .hermes/skills/ into
 # ~/.hermes/skills/. Hermes loads skills by name via skill_view(), so symlinks
@@ -396,6 +470,10 @@ cmd_install() {
     # Link Hermes plugins
     echo "📦 Installing Hermes plugins..."
     install_hermes_plugins
+
+    # Ensure config.yaml has required plugin sections
+    echo "🔧 Patching Hermes config..."
+    install_hermes_config
 
     # Link Hermes compression evals
     local evals_src="$DOTFILES_DIR/.hermes/compression-evals"

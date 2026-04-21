@@ -18,10 +18,27 @@ Architecture:
 
 import hashlib
 import logging
+import os
 import re
+from datetime import datetime
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────────────
+# Stats Log — tail with: tail -f ~/.hermes/compression.log
+# ─────────────────────────────────────────────────────
+
+_STATS_LOG = os.path.expanduser("~/.hermes/compression.log")
+
+def _log_stats(line: str):
+    """Append a timestamped line to the compression stats log."""
+    ts = datetime.now().strftime("%H:%M:%S")
+    try:
+        with open(_STATS_LOG, "a") as f:
+            f.write(f"[{ts}] {line}\n")
+    except Exception:
+        pass
 
 # ─────────────────────────────────────────────────────
 # Compression Rules (agent-agnostic, no dependencies)
@@ -127,7 +144,7 @@ def register(ctx):
         try:
             from hermes_cli.config import load_config
             cfg = load_config()
-            comp_cfg = cfg.get("compression", {})
+            comp_cfg = cfg.get("token_compression", {})
             input_enabled = comp_cfg.get("input_enabled", True)
             caveman_level = comp_cfg.get("output_level", None)
         except Exception:
@@ -163,9 +180,9 @@ def register(ctx):
                         msg["content"] = compressed
                         new_hash = _message_hash(compressed)
                         _compressed_hashes.add(new_hash)
-                        logger.debug(
-                            "Compressed message: %d → %d chars (%.0f%% saved)",
-                            len(content), len(compressed), savings,
+                        _log_stats(
+                            f"INPUT  | {len(content):>4} -> {len(compressed):>4} chars "
+                            f"({savings:.0f}% saved) | {compressed[:60]}..."
                         )
 
                 # Mark original as processed
@@ -176,8 +193,11 @@ def register(ctx):
             parts.append(CAVEMAN_RULES[caveman_level])
 
         if parts:
-            return {"context": "\n\n".join(parts)}
+            joined = "\n\n".join(parts)
+            _log_stats(f"OUTPUT | caveman={caveman_level} | rules={len(joined)} chars injected")
+            return {"context": joined}
         return {}
 
     ctx.register_hook("pre_llm_call", on_pre_llm_call)
+    _log_stats(f"─── session started ─── (input={input_enabled}, output={caveman_level or 'off'})")
     logger.info("Compression plugin registered: pre_llm_call hook")
