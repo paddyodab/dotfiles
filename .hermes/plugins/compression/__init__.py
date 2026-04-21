@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────
 
 _STATS_LOG = os.path.expanduser("~/.hermes/compression.log")
+_CHARS_PER_TOKEN = 4  # Rough estimate, matches hermes's estimate_tokens_rough
 
 def _log_stats(line: str):
     """Append a timestamped line to the compression stats log."""
@@ -39,6 +40,10 @@ def _log_stats(line: str):
             f.write(f"[{ts}] {line}\n")
     except Exception:
         pass
+
+def _tok(n_chars: int) -> int:
+    """Rough char->token estimate."""
+    return max(1, n_chars // _CHARS_PER_TOKEN)
 
 # ─────────────────────────────────────────────────────
 # Compression Rules (agent-agnostic, no dependencies)
@@ -131,6 +136,7 @@ def register(ctx):
 
     # Track which messages we've already compressed (by content hash)
     _compressed_hashes: set = set()
+    _response_stats: dict = {"chars": 0}  # Mutable container for closure
 
     def on_pre_llm_call(
         user_message: str,
@@ -149,6 +155,21 @@ def register(ctx):
             caveman_level = comp_cfg.get("output_level", None)
         except Exception:
             pass
+
+        # ── Log output compression stats from LAST turn ──
+        # (we can only estimate savings after seeing the response)
+        if _response_stats["chars"] > 0 and caveman_level:
+            resp_tokens = _tok(_response_stats["chars"])
+            # Caveman "full" typically saves ~60-70% of response length
+            _est_ratio = {"lite": 0.35, "full": 0.65, "ultra": 0.80}
+            ratio = _est_ratio.get(caveman_level, 0.50)
+            est_saved = int(resp_tokens * ratio)
+            est_without = resp_tokens + est_saved
+            _log_stats(
+                f"Output compression ({caveman_level}): "
+                f"~{resp_tokens} tokens "
+                f"(est. ~{est_without} without, ~{est_saved} saved, ~{int(ratio*100)}%)"
+            )
 
         parts = []
 
@@ -181,8 +202,10 @@ def register(ctx):
                         new_hash = _message_hash(compressed)
                         _compressed_hashes.add(new_hash)
                         _log_stats(
-                            f"INPUT  | {len(content):>4} -> {len(compressed):>4} chars "
-                            f"({savings:.0f}% saved) | {compressed[:60]}..."
+                            f"Input compression ({savings:.0f}%): "
+                            f"~{_tok(len(compressed))} tokens "
+                            f"(est. ~{_tok(len(content))} without, "
+                            f"~{_tok(len(content)) - _tok(len(compressed))} saved)"
                         )
 
                 # Mark original as processed
@@ -194,10 +217,15 @@ def register(ctx):
 
         if parts:
             joined = "\n\n".join(parts)
-            _log_stats(f"OUTPUT | caveman={caveman_level} | rules={len(joined)} chars injected")
             return {"context": joined}
         return {}
 
+    def on_post_llm_call(assistant_response: str = "", **kwargs):
+        """Track response length for output compression stats."""
+        if assistant_response:
+            _response_stats["chars"] = len(assistant_response)
+
     ctx.register_hook("pre_llm_call", on_pre_llm_call)
+    ctx.register_hook("post_llm_call", on_post_llm_call)
     _log_stats(f"─── session started ─── (input={input_enabled}, output={caveman_level or 'off'})")
     logger.info("Compression plugin registered: pre_llm_call hook")
