@@ -18,6 +18,19 @@ from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
+# File-based compression stats log (persistent across sessions)
+_COMP_LOG = Path.home() / ".hermes" / "compression.log"
+
+def _stat_log(msg: str):
+    """Append timestamped stat to ~/.hermes/compression.log."""
+    from datetime import datetime
+    ts = datetime.now().strftime("%H:%M:%S")
+    try:
+        with open(_COMP_LOG, "a") as f:
+            f.write(f"[{ts}] {msg}\n")
+    except Exception:
+        pass
+
 # ─────────────────────────────────────────────────────
 # Lexicon loader
 # ─────────────────────────────────────────────────────
@@ -228,6 +241,7 @@ def _message_hash(content: str) -> str:
 def register(ctx):
     """Register compression plugin hooks."""
     _compressed_hashes: set = set()
+    _output_logged: bool = False
 
     def on_pre_llm_call(
         user_message: str,
@@ -240,7 +254,7 @@ def register(ctx):
         try:
             from hermes_cli.config import load_config
             cfg = load_config()
-            comp_cfg = cfg.get("compression", {})
+            comp_cfg = cfg.get("token_compression", {})
             input_enabled = comp_cfg.get("input_enabled", True)
             caveman_level = comp_cfg.get("output_level", None)
         except Exception:
@@ -269,11 +283,16 @@ def register(ctx):
                         msg["content"] = compressed
                         _compressed_hashes.add(_message_hash(compressed))
                         logger.debug("Compressed: %d → %d chars (%.0f%%)", len(content), len(compressed), savings)
+                        _stat_log(f"Input ({savings:.0f}%): ~{len(compressed)} tok (~{len(content)-len(compressed)} saved) \"{compressed[:60]}\"")
                 _compressed_hashes.add(content_hash)
 
         # OUTPUT COMPRESSION
         if caveman_level and caveman_level in CAVEMAN_RULES:
             parts.append(CAVEMAN_RULES[caveman_level])
+            if not _output_logged:
+                nonlocal _output_logged
+                _output_logged = True
+                _stat_log(f"Output ({caveman_level}): active")
 
         if parts:
             return {"context": "\n\n".join(parts)}
