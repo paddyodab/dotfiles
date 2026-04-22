@@ -2,5 +2,5 @@ name: compression
 version: 1.0.0
 description: Input and output token compression — compresses prompts and makes responses terse
 author: Pat + Hermes
-provides_hooks: [pre_llm_call]
+provides_hooks: [pre_llm_call, post_llm_call]
 provides_tools: []
