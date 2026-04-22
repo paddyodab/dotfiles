@@ -19,65 +19,94 @@ fi
 
 mkdir -p "$HOME/.hermes"
 
-python3 - "$CONFIG" "$TEMPLATE" <<'PYEOF'
-import sys, os, re, json, shutil
+python3 - "$CONFIG" "$SCRIPT_DIR/config.yaml" <<'PYEOF'
+import sys, os, shutil, re
 
 live_path, template_path = sys.argv[1], sys.argv[2]
 
-# yaml-like parse: use pyyaml if available, else crude block parser
-try:
-    import yaml
-    def load_yaml(p):
-        with open(p) as f:
-            return yaml.safe_load(f) or {}
-    def dump_yaml(p, d):
-        with open(p, "w") as f:
-            yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-except ImportError:
-    # Fallback: install pyyaml in venv if available, else try pip
-    os.system(f'{sys.executable} -m pip install -q pyyaml 2>/dev/null')
-    try:
-        import yaml
-        def load_yaml(p):
-            with open(p) as f:
-                return yaml.safe_load(f) or {}
-        def dump_yaml(p, d):
-            with open(p, "w") as f:
-                yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-    except ImportError:
-        print("  need pyyaml: pip install pyyaml")
-        sys.exit(1)
+TEMPLATE_SECTIONS = {
+    "token_compression": """
+token_compression:
+  input_enabled: true
+  output_level: full
+""",
+    "compression": """
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+  protect_last_n: 20
+""",
+    "plugins": """
+plugins:
+  enabled:
+    - compression
+    - cavemem-bridge
+""",
+    "mcp_servers": """
+mcp_servers:
+  cavemem:
+    command: cavemem
+    args:
+      - mcp
+    enabled: false
+""",
+}
 
-template = load_yaml(template_path)
+def find_top_level_keys(text):
+    """Find top-level YAML keys and their line positions."""
+    keys = {}
+    for i, line in enumerate(text.splitlines()):
+        # Top-level key: not indented, ends with colon, not a comment
+        m = re.match(r'^([a-zA-Z_][a-zA-Z0-9_]*):', line)
+        if m:
+            keys[m.group(1)] = i
+    return keys
+
+def extract_block(text, start_line):
+    """Extract full indented block starting at start_line."""
+    lines = text.splitlines()
+    if start_line >= len(lines):
+        return ""
+    result = [lines[start_line]]
+    for i in range(start_line + 1, len(lines)):
+        if lines[i].startswith(' ') or lines[i].startswith('\t') or lines[i].strip() == '':
+            result.append(lines[i])
+        elif lines[i].startswith('#'):
+            result.append(lines[i])
+        else:
+            break
+    return '\n'.join(result)
 
 if os.path.exists(live_path):
-    live = load_yaml(live_path)
+    with open(live_path) as f:
+        live_text = f.read()
 else:
-    live = {}
+    live_text = ""
 
-MERGE_KEYS = [
-    "token_compression",
-    "compression",
-    "plugins",
-    "mcp_servers",
-]
-
+existing_keys = find_top_level_keys(live_text)
 changed = False
-for key in MERGE_KEYS:
-    if key in template:
-        if key not in live or live[key] != template[key]:
-            live[key] = template[key]
-            changed = True
-            print(f"  merged: {key}")
-        else:
-            print(f"  ok: {key} (unchanged)")
+append_sections = []
+
+for key, section in TEMPLATE_SECTIONS.items():
+    if key in existing_keys:
+        # Already exists — skip (don't clobber)
+        print(f"  exists: {key} (kept)")
+    else:
+        append_sections.append(section.strip())
+        changed = True
+        print(f"  adding: {key}")
 
 if changed:
     if os.path.exists(live_path):
         backup = live_path + ".bak"
         shutil.copy2(live_path, backup)
         print(f"  backup: {backup}")
-    dump_yaml(live_path, live)
+
+    with open(live_path, "a") as f:
+        f.write("\n\n# ── Installed by dotfiles/.hermes/install.sh ──\n")
+        for s in append_sections:
+            f.write(s + "\n")
     print(f"  wrote: {live_path}")
 else:
     print("  no changes needed")
