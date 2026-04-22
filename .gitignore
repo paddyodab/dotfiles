@@ -4,3 +4,4 @@ agent-models.env
 __pycache__/
 *.pyc
 *.pyo
+.env
