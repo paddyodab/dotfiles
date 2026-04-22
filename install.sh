@@ -307,21 +307,93 @@ config_path = sys.argv[1]
 try:
     import yaml
 except ImportError:
-    # Fallback: naive key check + append
+    # Fallback: line-based patching (no PyYAML needed)
     with open(config_path) as f:
         content = f.read()
-    needs_plugins = "plugins:" not in content
-    needs_tc = "token_compression:" not in content
-    if needs_plugins or needs_tc:
-        with open(config_path, "a") as f:
-            f.write("\n# ── Dotfiles-managed config ──\n")
-            if needs_plugins:
-                f.write("plugins:\n  enabled:\n  - compression\n  - cavemem-bridge\n")
-            if needs_tc:
-                f.write("token_compression:\n  input_enabled: true\n  output_level: full\n")
-        print("   ✓ Appended missing config sections")
+    changed = False
+
+    # --- plugins.enabled: ensure both compression and cavemem-bridge ---
+    if "plugins:" not in content:
+        content += "\n# ── Dotfiles-managed config ──\nplugins:\n  enabled:\n  - compression\n  - cavemem-bridge\n"
+        changed = True
+        print("   + Added plugins.enabled: [compression, cavemem-bridge]")
     else:
-        print("   ✓ Config already has plugins + token_compression")
+        # plugins: exists — check each required plugin and insert if missing
+        for plugin in ["compression", "cavemem-bridge"]:
+            marker = f"- {plugin}"
+            # Check if marker appears under an "enabled:" list
+            found = False
+            in_enabled = False
+            for line in content.splitlines():
+                stripped = line.strip()
+                if "enabled:" in stripped:
+                    in_enabled = True
+                    continue
+                if in_enabled:
+                    if stripped.startswith("- "):
+                        if stripped == marker:
+                            found = True
+                            break
+                    elif stripped and not stripped.startswith("#"):
+                        break
+
+            if not found:
+                # Find the enabled: block and insert after its last list item
+                lines = content.splitlines()
+                result = []
+                in_en = False
+                had_list_items = False
+                enabled_line_idx = -1
+                enabled_indent = ""
+                for idx, ln in enumerate(lines):
+                    result.append(ln)
+                    if "enabled:" in ln.strip() and not in_en:
+                        in_en = True
+                        enabled_line_idx = idx
+                        enabled_indent = ln[:len(ln) - len(ln.lstrip())]
+                        # Check for inline empty list: "enabled: []"
+                        if "[]" in ln:
+                            # Replace with multi-line format (match dotfiles convention: - at same indent as key)
+                            result[-1] = f"{enabled_indent}enabled:"
+                            result.append(f"{enabled_indent}- {plugin}")
+                            in_en = False
+                            had_list_items = True
+                        continue
+                    elif in_en and ln.strip().startswith("- "):
+                        had_list_items = True
+                        # Peek ahead — if next non-blank line isn't a list item,
+                        # this is the last entry, insert after it
+                        for k in range(idx + 1, len(lines)):
+                            nxt = lines[k].strip()
+                            if nxt == "" or nxt.startswith("#"):
+                                continue
+                            if not nxt.startswith("- "):
+                                # Last list item — insert our plugin here
+                                indent = ln[:len(ln) - len(ln.lstrip())]
+                                result.append(f"{indent}{marker}")
+                                in_en = False
+                            break
+                    elif in_en and ln.strip() and not ln.strip().startswith("#"):
+                        # Left enabled block without finding list items (e.g. "enabled:" alone)
+                        if not had_list_items:
+                            result.append(f"{enabled_indent}- {plugin}")
+                        in_en = False
+                content = "\n".join(result) + "\n"
+                changed = True
+                print(f"   + Added {plugin} to plugins.enabled")
+
+    # --- token_compression section ---
+    if "token_compression:" not in content:
+        content += "\ntoken_compression:\n  input_enabled: true\n  output_level: full\n"
+        changed = True
+        print("   + Added token_compression section")
+
+    if changed:
+        with open(config_path, "w") as f:
+            f.write(content)
+        print("   ✓ Config updated")
+    else:
+        print("   ✓ Config already complete")
     sys.exit(0)
 
 with open(config_path) as f:
