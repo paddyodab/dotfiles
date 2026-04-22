@@ -1,6 +1,6 @@
 name: cavemem-bridge
-version: 1.0.0
-description: Bridge hermes events to cavemem — captures sessions for cross-agent memory
+version: 2.0.0
+description: Bridge hermes events to cavemem — captures sessions and provides memory search
 author: Pat + Hermes
 provides_hooks: [on_session_start, on_session_end, post_tool_call, pre_llm_call]
-provides_tools: []
+provides_tools: [cavemem_search]

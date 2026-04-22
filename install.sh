@@ -316,7 +316,7 @@ except ImportError:
         with open(config_path, "a") as f:
             f.write("\n# ── Dotfiles-managed config ──\n")
             if needs_plugins:
-                f.write("plugins:\n  enabled:\n  - compression\n")
+                f.write("plugins:\n  enabled:\n  - compression\n  - cavemem-bridge\n")
             if needs_tc:
                 f.write("token_compression:\n  input_enabled: true\n  output_level: full\n")
         print("   ✓ Appended missing config sections")
@@ -329,19 +329,22 @@ with open(config_path) as f:
 
 changed = False
 
-# Ensure plugins.enabled includes "compression"
+# Ensure plugins.enabled includes "compression" and "cavemem-bridge"
+_required_plugins = ["compression", "cavemem-bridge"]
 if "plugins" not in cfg:
-    cfg["plugins"] = {"enabled": ["compression"]}
+    cfg["plugins"] = {"enabled": _required_plugins[:]}
     changed = True
-    print("   + Added plugins.enabled: [compression]")
+    print("   + Added plugins.enabled: " + str(_required_plugins))
 elif "enabled" not in cfg["plugins"]:
-    cfg["plugins"]["enabled"] = ["compression"]
+    cfg["plugins"]["enabled"] = _required_plugins[:]
     changed = True
-    print("   + Added compression to plugins.enabled")
-elif "compression" not in cfg["plugins"]["enabled"]:
-    cfg["plugins"]["enabled"].append("compression")
-    changed = True
-    print("   + Added compression to plugins.enabled")
+    print("   + Added plugins.enabled: " + str(_required_plugins))
+else:
+    for _p in _required_plugins:
+        if _p not in cfg["plugins"]["enabled"]:
+            cfg["plugins"]["enabled"].append(_p)
+            changed = True
+            print("   + Added " + _p + " to plugins.enabled")
 
 # Ensure token_compression section exists
 if "token_compression" not in cfg:
@@ -524,8 +527,9 @@ cmd_install() {
   echo "    Agent skills: ~/.hermes/skills/ (symlinked)"
   echo "    Plugins: ~/.hermes/plugins/ (symlinked)"
   echo "    Compression: /output-compression full (or set compression.output_level in config.yaml)"
+  echo "    Cavemem: cross-agent memory search (requires 'npm i -g cavemem' + 'cavemem install')"
   echo "    Evals: ~/.hermes/compression-evals/eval.py (symlinked)"
-  echo "    Usage: ANTHROPIC_API_KEY=... python eval.py --model claude-sonnet-4"
+  echo "    Usage: ANTHROPIC_API_KEY=*** python eval.py --model claude-sonnet-4"
     echo "    Agents: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
     echo "            agent-secretary, agent-puddleglum, agent-doc-agent, agent-message-bus"
     echo "    Load via: skill_view(name='agent-team-lead')"

@@ -209,7 +209,56 @@ A team-lead orchestration system with 7 specialized agents that coordinate via a
 - `.claude/skill-sets/universal/agent-*/SKILL.md` — Claude Code agent skills (7 agents)
 - `.claude/CLAUDE.md` — Claude Code global agent instructions
 - `.hermes/skills/agent-*/SKILL.md` — Hermes agent skills (8 skills, symlinked to ~/.hermes/skills/)
+- `.hermes/plugins/cavemem-bridge/` — Cavemem cross-agent memory plugin for Hermes
+- `.hermes/plugins/compression/` — Token compression plugin for Hermes
 - `agent/contracts/secretary-contract.md` — Delegation contract for secretary agent
 - `agent/contracts/team-lead-contracts.md` — Bus message contracts for pipeline coordination
 - `.claude/skill-sets/universal/agent-message-bus/` — Message bus skill (Claude Code)
 - `.hermes/skills/agent-message-bus/` — Message bus skill (Hermes)
+
+## Cavemem — Cross-Agent Memory
+
+Cavemem provides persistent, searchable memory across agent sessions. It captures observations (user prompts, tool calls, summaries) into a local SQLite + FTS5 database that any agent can query.
+
+### Setup (new machine)
+
+```bash
+# 1. Install cavemem globally
+npm install -g cavemem
+
+# 2. Initialize (creates ~/.cavemem/ with data.db)
+cavemem install
+
+# 3. Install dotfiles (symlinks the hermes plugin + patches config.yaml)
+./install.sh
+
+# 4. Restart hermes to pick up the plugin
+```
+
+### What it does
+
+- **Write side**: The `cavemem-bridge` plugin captures hermes events (session start/end, user prompts, tool calls) and pipes them to cavemem's SQLite database
+- **Read side**: The plugin registers a `cavemem_search` tool — when you say "recall X" or "what did we talk about Y", hermes searches the FTS5 index directly
+- **Shared DB**: Claude Code also writes to the same `~/.cavemem/data.db` via its hooks, so observations from both agents are searchable from either
+
+### Usage
+
+Just talk naturally:
+- "Can you recall what we discussed about nginx?"
+- "What did I ask about last Tuesday?"
+- "Remember anything about the deployment pipeline?"
+
+Hermes will call `cavemem_search` automatically.
+
+### Manual queries
+
+```bash
+# CLI search
+cavemem search "query terms" --limit 10
+
+# Direct SQLite
+sqlite3 ~/.cavemem/data.db "SELECT * FROM observations WHERE content LIKE '%nginx%';"
+
+# Check stats
+sqlite3 ~/.cavemem/data.db "SELECT COUNT(*) FROM observations;"
+```
