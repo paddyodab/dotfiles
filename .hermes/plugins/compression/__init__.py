@@ -248,6 +248,7 @@ def register(ctx):
         conversation_history: List[Dict[str, Any]] = None,
         **kwargs,
     ) -> Dict[str, str]:
+        nonlocal _output_logged
         # Read config
         input_enabled = True
         caveman_level = None
@@ -290,7 +291,6 @@ def register(ctx):
         if caveman_level and caveman_level in CAVEMAN_RULES:
             parts.append(CAVEMAN_RULES[caveman_level])
             if not _output_logged:
-                nonlocal _output_logged
                 _output_logged = True
                 _stat_log(f"Output ({caveman_level}): active")
 
