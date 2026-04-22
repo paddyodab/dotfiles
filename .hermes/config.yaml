@@ -1,0 +1,44 @@
+# ── Token Compression ─────────────────────────────────────────────────
+# Plugin-based compression. input_enabled + output_level control I/O.
+# Compression plugin at plugins/compression/. Stats: ~/.hermes/compression.log
+token_compression:
+  input_enabled: true
+  output_level: full
+
+# ── Core Compression Settings ─────────────────────────────────────────
+# threshold: ratio below which input is considered "compressed"
+# target_ratio: how aggressively to compress (0.2 = keep 20%)
+# protect_last_n: never compress last N messages (preserve recent context)
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+  protect_last_n: 20
+
+# ── Plugins ───────────────────────────────────────────────────────────
+# compression: input/output token compression via plugin hooks
+# cavemem-bridge: searchable memory via cavemem FTS5 (no MCP)
+plugins:
+  enabled:
+    - compression
+    - cavemem-bridge
+
+# ── Cavemem Bridge ────────────────────────────────────────────────────
+# Prereqs: npm i -g cavemem && cavemem install
+# DB: ~/.cavemem/data.db
+# Hooks pipe to `cavemem hook run`. cavemem_search tool queries SQLite FTS5.
+# NOTE: mcp_servers.cavemem below is DISABLED. cavemem-bridge plugin is used.
+mcp_servers:
+  cavemem:
+    command: cavemem
+    args:
+      - mcp
+    enabled: false
+
+# ── TODO: Machine-specific config ─────────────────────────────────────
+# Merge this file with machine-local overrides:
+#   - tool_settings (model, base_url, api_key per provider)
+#   - provider keys
+#   - feature flags (eval mode, etc.)
+# Install script should: cp config.yaml ~/.hermes/config.yaml
+# then overlay machine-specific YAML on top.
