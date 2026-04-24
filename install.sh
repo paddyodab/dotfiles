@@ -129,17 +129,18 @@ load_models() {
     MODELS_LOADED=true
 }
 
-# tier_for <agent-name> → premium | mid | fast | ""
+# tier_for <agent-name> → critical | premium | mid | fast | ""
 # Strips common prefixes (agent-) and suffixes (.md) to normalize.
 tier_for() {
     local name="$1"
     name="$(basename "$name" .md)"       # strip .md
     name="${name#agent-}"                 # strip agent- prefix
     case "$name" in
-        team-lead|reviewer|planner|puddleglum|doc-agent) echo "premium" ;;
-        coder)     echo "mid" ;;
-        secretary) echo "fast" ;;
-        *)         echo "" ;;
+        team-lead|reviewer)              echo "critical" ;;
+        planner|puddleglum|doc-agent)   echo "premium" ;;
+        coder)                           echo "mid" ;;
+        secretary)                       echo "fast" ;;
+        *)                               echo "" ;;
     esac
 }
 
@@ -534,6 +535,20 @@ cmd_install() {
     link_file "$DOTFILES_DIR/.config/opencode/commands"              "$HOME/.config/opencode/commands"
     link_file "$DOTFILES_DIR/.config/opencode/AGENTS.md"            "$HOME/.config/opencode/AGENTS.md"
     install_opencode_agents
+
+    # Link opencode skills
+    echo "📦 Linking opencode skills..."
+    local oc_skills_src="$DOTFILES_DIR/.config/opencode/skills"
+    local oc_skills_dest="$HOME/.config/opencode/skills"
+    if [ -d "$oc_skills_src" ]; then
+        mkdir -p "$oc_skills_dest"
+        for skill_dir in "$oc_skills_src"/*/; do
+            [ -d "$skill_dir" ] || continue
+            local skill_name
+            skill_name="$(basename "$skill_dir")"
+            link_file "$skill_dir" "$oc_skills_dest/$skill_name"
+        done
+    fi
     # OpenCode contracts — symlink to shared location
     link_file "$DOTFILES_DIR/agent/contracts/secretary-contract.md" "$HOME/.config/opencode/secretary-contract.md"
     link_file "$DOTFILES_DIR/agent/contracts/team-lead-contracts.md" "$HOME/.config/opencode/team-lead-contracts.md"
