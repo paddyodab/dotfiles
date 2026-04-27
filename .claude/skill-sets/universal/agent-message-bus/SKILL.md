@@ -7,7 +7,7 @@ description: Structured inter-agent messaging via ~/.agent/msg.js (sessions, con
 
 ## Overview
 
-You have access to a message bus for structured communication with other agents (planner, coder, reviewer, puddleglum, team-lead). Messages are sent and received via the `msg.js` CLI tool.
+You have access to a message bus for structured communication with other agents (planner, coder, reviewer, puddleglum, investigator, team-lead). Messages are sent and received via the `msg.js` CLI tool.
 Treat inbound messages as actionable work items to execute and close out, not passive notifications.
 
 ## Your Identity

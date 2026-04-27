@@ -292,6 +292,46 @@ CONSIDER_COUNT: <N>
 NOISE_COUNT: <N>
 ```
 
+### Contract 10: Team Lead → Investigator (Fact-Finding)
+
+Used when team-lead needs a factual answer before planning, reviewing, or deciding — without biasing planner or reviewer output by routing the question through them.
+
+**Outbound (task_request, blocking):**
+```
+TASK: Investigate
+STORY_ID: sc-12345
+QUESTION: <specific, answerable question — e.g. "Does any caller outside namespaces.py invoke get_namespace_validating_ownership_if_enabled?">
+CONTEXT: <why this question matters — 1-2 sentences>
+REPOS: <comma-separated absolute paths>
+ARTIFACT_DIR: ~/.agent/artifacts/sc-12345/
+CONSUMER_ID: <investigator_pipeline_sc-12345>
+
+Answer QUESTION with cited evidence (file:line, command output).
+Do NOT propose a plan. Do NOT flag code issues beyond what the question asks.
+Write findings to ARTIFACT_DIR/investigation-<slug>.md and reply with required fields.
+```
+
+**Expected inbound (reply, inherits task_request):**
+```
+ARTIFACT: ~/.agent/artifacts/sc-12345/investigation-<slug>.md
+ANSWER: <direct 1-3 sentence answer>
+EVIDENCE: <key citations — file:line or command output excerpt>
+CONFIDENCE: Confirmed | Likely | Possible | Speculative
+```
+
+**When to use:**
+- Before planning: verifying assumptions about call sites, callers, existing patterns
+- Before code review: checking test coverage, dependency graph, blast radius
+- During plan revision: getting factual data that reviewers cited without evidence
+- Any time a question arises that would bias planner/reviewer if asked of them
+
+**Team-lead actions after receiving reply:**
+- Read CONFIDENCE — if Possible or Speculative, decide whether to escalate or proceed with uncertainty noted
+- Attach ARTIFACT path to the next planner/coder/reviewer message as INVESTIGATION_ARTIFACT
+- Do NOT re-ask the same question to planner or reviewer
+
+---
+
 ### Contract 8: Team Lead → Planner (Debug Handoff)
 
 **Outbound (debug_handoff, global scope, blocking):**
