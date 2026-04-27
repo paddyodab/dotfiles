@@ -138,7 +138,7 @@ tier_for() {
     case "$name" in
         team-lead|reviewer)              echo "critical" ;;
         planner|puddleglum|doc-agent)   echo "premium" ;;
-        coder|investigator)              echo "mid" ;;
+        coder|investigator|issue-worker)  echo "mid" ;;
         secretary)                       echo "fast" ;;
         *)                               echo "" ;;
     esac
@@ -606,7 +606,7 @@ cmd_install() {
     echo "  Claude Code:"
     echo "    Global instructions: ~/.claude/CLAUDE.md"
     echo "    Agent skills: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
-    echo "                  agent-secretary, agent-puddleglum, agent-doc-agent, agent-investigator"
+    echo "                  agent-secretary, agent-puddleglum, agent-doc-agent, agent-investigator, agent-issue-worker"
     echo "    Skills: ~/.claude/skills/"
     echo "    Activate a profile: ./install.sh activate <profile> [project-dir]"
     echo ""
@@ -618,7 +618,7 @@ cmd_install() {
   echo "    Evals: ~/.hermes/compression-evals/eval.py (symlinked)"
   echo "    Usage: ANTHROPIC_API_KEY=*** python eval.py --model claude-sonnet-4"
     echo "    Agents: agent-team-lead, agent-planner, agent-coder, agent-reviewer,"
-    echo "            agent-secretary, agent-puddleglum, agent-doc-agent, agent-investigator, agent-message-bus"
+    echo "            agent-secretary, agent-puddleglum, agent-doc-agent, agent-investigator, agent-issue-worker, agent-message-bus"
     echo "    Load via: skill_view(name='agent-team-lead')"
     echo ""
     echo "  Pi:"
