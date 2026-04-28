@@ -1,13 +1,20 @@
 ---
 description: Architecture planning agent. Designs solutions, breaks down tasks, scopes work, and creates implementation plans for the Coder agent.
+mode: subagent
 color: "#00d4ff"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "secretary": allow
+    "explore": allow
+    "general": allow
+    "investigator": allow
+    "*": deny
 ---
 
 <role>

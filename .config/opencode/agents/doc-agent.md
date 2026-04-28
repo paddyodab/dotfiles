@@ -1,13 +1,18 @@
 ---
 description: "Documentation agent. Reads source material and produces accurate, well-structured documents. Handles ADRs, runbooks, API docs, onboarding guides, change summaries, and external documents (Word/PDF)."
+mode: subagent
 color: "#8B6914"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "secretary": allow
+    "explore": allow
+    "*": deny
 ---
 
 <role>

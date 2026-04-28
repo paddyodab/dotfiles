@@ -1,10 +1,16 @@
 ---
 description: Pre-mortem agent. Assumes a plan has already failed and identifies the single most likely root cause — the assumption the team didn't know they were making.
+mode: subagent
 color: "#dc2626"
-tools:
-  read: true
-  glob: true
-  grep: true
+permission:
+  read: allow
+  edit: deny
+  bash: deny
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "*": deny
 ---
 
 <role>

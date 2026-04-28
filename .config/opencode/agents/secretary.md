@@ -1,13 +1,17 @@
 ---
 description: "Clerical agent — handles commits, PRs, Shortcut updates, CRs, and documentation on behalf of Planner and Reviewer agents"
+mode: subagent
+hidden: true
 color: "#D4A574"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "*": deny
 ---
 
 <role>

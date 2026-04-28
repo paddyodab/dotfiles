@@ -1,13 +1,19 @@
 ---
 description: Production coding agent. Implements features, fixes bugs, executes plans from the Planner agent, and makes code changes across the codebase.
+mode: subagent
 color: "#7c3aed"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "secretary": deny
+    "explore": allow
+    "general": allow
+    "*": deny
 ---
 
 <role>

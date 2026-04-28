@@ -89,3 +89,33 @@ Always end with:
 - Coder does NOT delegate to secretary — same model tier in practice, no cost savings, and coder loses context.
 - Read `~/.agent/contracts/secretary-contract.md` for the delegation contract before calling.
 - Secretary validates required fields and fails fast if anything is missing.
+
+## 12) Multi-Agent Team
+
+This environment has a multi-agent team available as subagents. Each agent is a specialized role.
+
+### Agent roster
+| Agent | Mode | Role |
+|-------|------|------|
+| `team-lead` | primary | Pipeline orchestrator — drives stories through planning → implementation → review |
+| `planner` | subagent | Architecture planning, task breakdown, scoping |
+| `coder` | subagent | Production code implementation |
+| `reviewer` | subagent | Code review, bug detection, style checking |
+| `secretary` | subagent (hidden) | Commits, PRs, Shortcut updates, CRs, documentation |
+| `puddleglum` | subagent | Pre-mortem analysis (finds the assumption you didn't know you were making) |
+| `doc-agent` | subagent | Documentation authoring (ADRs, runbooks, API docs, onboarding guides) |
+| `investigator` | subagent | Root cause analysis, data patterns, calibrated confidence findings |
+| `issue-worker` | subagent (hidden) | Pull-mode GH issue worker — claims, works, and closes one issue per invocation |
+
+### Spawning a subagent (for team-lead use)
+Use the Task tool with the thin prompt pattern:
+```
+You are the {role} agent. Load the agent-message-bus skill,
+then check your inbox and process the blocking message from team-lead.
+```
+
+All context goes on the message bus, not in the Task prompt. This prevents reward hijacking and preserves independent reasoning.
+
+### Contracts
+- Secretary delegation contract: `~/.agent/contracts/secretary-contract.md`
+- Team-lead pipeline contracts: `~/.agent/contracts/team-lead-contracts.md`

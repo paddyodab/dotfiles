@@ -1,13 +1,19 @@
 ---
 description: Code review agent. Checks for bugs, security issues, missed edge cases, style problems, and validates that code matches intent.
+mode: subagent
 color: "#10b981"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "secretary": allow
+    "explore": allow
+    "general": allow
+    "*": deny
 ---
 
 <role>

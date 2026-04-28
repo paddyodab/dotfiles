@@ -1,13 +1,26 @@
 ---
 description: "Pipeline orchestrator. Takes a Shortcut story and drives it through planning, implementation, and PR by coordinating Planner, Coder, and Reviewer via the message bus."
+mode: primary
 color: "#F59E0B"
-tools:
-  read: true
-  write: true
-  edit: true
-  bash: true
-  grep: true
-  glob: true
+permission:
+  read: allow
+  edit: allow
+  bash: allow
+  grep: allow
+  glob: allow
+  skill: allow
+  task:
+    "planner": allow
+    "coder": allow
+    "reviewer": allow
+    "secretary": allow
+    "puddleglum": allow
+    "investigator": allow
+    "doc-agent": allow
+    "issue-worker": allow
+    "explore": allow
+    "general": allow
+    "*": deny
 ---
 
 <role>
